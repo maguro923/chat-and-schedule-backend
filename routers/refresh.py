@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Header, Depends
 from database.database import database
 from datetime import datetime, timedelta
 import pytz
@@ -8,13 +8,25 @@ from config import VALIDITY_HOURS
 
 router = APIRouter()
 
+async def get_headers(
+    refresh_token: str = Header(...),
+    device_id: str = Header(...)
+):
+    print("headers:",refresh_token, device_id)
+    if not refresh_token or not device_id:
+        raise HTTPException(status_code=422, detail="Invalid headers")
+    return {"refresh_token": refresh_token, "device_id": device_id}
+
 @router.post("/auth/refresh", status_code=200)
-async def users_refresh(request:Request):#header: refresh_token device_id
+async def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header: refresh_token device_id
     user = []
     refresh_token = []
+    print("request:",request)
+    print("headers:",headers)
+    #headers = request.headers
     try:
-        user = database.fetch("users", {"refresh_token": request.headers['refresh_token']})
-        refresh_token = database.fetch("refresh_tokens", {"refresh_token": request.headers['refresh_token']})
+        user = database.fetch("users", {"refresh_token": headers['refresh_token']})
+        refresh_token = database.fetch("refresh_tokens", {"refresh_token": headers['refresh_token']})
     except Exception as e:
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
@@ -28,14 +40,14 @@ async def users_refresh(request:Request):#header: refresh_token device_id
         raise HTTPException(status_code=403, detail="refresh_token expired")
     
     #デバイスIDの確認(同一デバイスであるか)
-    if not user[0]["device_id"] == request.headers['device_id']:
+    if not user[0]["device_id"] == headers['device_id']:
         raise HTTPException(status_code=403, detail="Invalid device_id")
     
     #新しいトークンの生成
     try:
         new_access_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32))
         if (database.delete("access_tokens", {"access_token":user[0]["access_token"]}) and
-            database.update("users", {"access_token":new_access_token}, {"refresh_token":request.headers['refresh_token']}) and
+            database.update("users", {"access_token":new_access_token}, {"refresh_token":headers['refresh_token']}) and
             database.insert("access_tokens", {"access_token":new_access_token, "validity_hours":VALIDITY_HOURS["access_token"]})
             ):
             token_created = datetime.now(pytz.timezone('Asia/Tokyo'))
