@@ -21,9 +21,6 @@ async def get_headers(
 async def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header: refresh_token device_id
     user = []
     refresh_token = []
-    print("request:",request)
-    print("headers:",headers)
-    #headers = request.headers
     try:
         user = database.fetch("users", {"refresh_token": headers['refresh_token']})
         refresh_token = database.fetch("refresh_tokens", {"refresh_token": headers['refresh_token']})
