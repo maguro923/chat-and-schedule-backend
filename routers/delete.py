@@ -8,14 +8,14 @@ from psycopg.rows import dict_row
 
 router = APIRouter()
 
-def delete_user(user_name:str, headers:dict) -> bool:
+def delete_user(user_name:str, user:dict) -> bool:
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
                 cursor.execute("BEGIN")
                 if (database.delete(cursor,"users", {"name":user_name}) and
-                    database.delete(cursor,"access_tokens", {"access_token":headers['access_token']}) and
-                    database.delete(cursor,"refresh_tokens", {"refresh_token":headers['refresh_token']})
+                    database.delete(cursor,"access_tokens", {"access_token":user[0]['access_token']}) and
+                    database.delete(cursor,"refresh_tokens", {"refresh_token":user[0]['refresh_token']})
                 ):
                     conn.commit()
                     return True
@@ -65,7 +65,7 @@ def users_delete(request:Request,user_name:str, headers:dict = Depends(get_heade
     
     #ユーザー情報の削除
     try:
-        if delete_user(user_name, headers):
+        if delete_user(user_name, user):
             return
         else:
             raise Exception

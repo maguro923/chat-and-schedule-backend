@@ -14,9 +14,9 @@ def generate_tokens(user: dict, new_access_token: dict, headers: dict):
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
                 cursor.execute("BEGIN")
-                if (database.delete("access_tokens", {"access_token":user[0]["access_token"]}) and
-                    database.update("users", {"access_token":new_access_token}, {"refresh_token":headers['refresh_token']}) and
-                    database.insert("access_tokens", {"access_token":new_access_token, "validity_hours":VALIDITY_HOURS["access_token"]})
+                if (database.delete(cursor,"access_tokens", {"access_token":user[0]["access_token"]}) and
+                    database.update(cursor,"users", {"access_token":new_access_token}, {"refresh_token":headers['refresh_token']}) and
+                    database.insert(cursor,"access_tokens", {"access_token":new_access_token, "validity_hours":VALIDITY_HOURS["access_token"]})
                 ):
                     conn.commit()
                     return True
