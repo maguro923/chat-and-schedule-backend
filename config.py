@@ -1,4 +1,4 @@
 VALIDITY_HOURS = {
     "access_token": 1,
-    "refresh_token": 3
+    "refresh_token": 24
 }
