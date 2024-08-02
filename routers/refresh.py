@@ -5,8 +5,29 @@ import pytz
 import string
 import secrets
 from config import VALIDITY_HOURS
+from psycopg.rows import dict_row
 
 router = APIRouter()
+
+def generate_tokens(user: dict, new_access_token: dict, headers: dict):
+    try:
+        with database.get_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cursor:
+                cursor.execute("BEGIN")
+                if (database.delete("access_tokens", {"access_token":user[0]["access_token"]}) and
+                    database.update("users", {"access_token":new_access_token}, {"refresh_token":headers['refresh_token']}) and
+                    database.insert("access_tokens", {"access_token":new_access_token, "validity_hours":VALIDITY_HOURS["access_token"]})
+                ):
+                    conn.commit()
+                    return True
+                else:
+                    raise Exception
+    except Exception as e:
+        print(f"Error update tokens: {e}")
+        if conn:
+            conn.rollback()
+            print("transaction rollback")
+        return False
 
 def get_headers(
     refresh_token: str = Header(...),
@@ -22,8 +43,10 @@ def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header:
     user = []
     refresh_token = []
     try:
-        user = database.fetch("users", {"refresh_token": headers['refresh_token']})
-        refresh_token = database.fetch("refresh_tokens", {"refresh_token": headers['refresh_token']})
+        with database.get_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cursor:
+                user = database.fetch(cursor,"users", {"refresh_token": headers['refresh_token']})
+                refresh_token = database.fetch(cursor,"refresh_tokens", {"refresh_token": headers['refresh_token']})
     except Exception as e:
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
@@ -43,10 +66,7 @@ def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header:
     #新しいトークンの生成
     try:
         new_access_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32))
-        if (database.delete("access_tokens", {"access_token":user[0]["access_token"]}) and
-            database.update("users", {"access_token":new_access_token}, {"refresh_token":headers['refresh_token']}) and
-            database.insert("access_tokens", {"access_token":new_access_token, "validity_hours":VALIDITY_HOURS["access_token"]})
-            ):
+        if generate_tokens(user, new_access_token, headers):
             token_created = datetime.now(pytz.timezone('Asia/Tokyo'))
             return {
                 "detail": "access_token regenerated",

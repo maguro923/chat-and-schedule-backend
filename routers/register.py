@@ -8,6 +8,7 @@ import pytz
 from typing_extensions import Annotated
 from config import VALIDITY_HOURS
 import re
+from psycopg.rows import dict_row
 
 import string
 import secrets
@@ -46,52 +47,71 @@ class RegisterRequest(BaseModel):
 
 
 def register_user(body:RegisterRequest, password:dict, tokens:dict) -> bool:
-    return database.insert(
-        "users",
-        {
-            "name":body.username,
-            "email":body.email,
-            "hash_password":password["hash"],
-            "salt": password["salt"],
-            "device_id":body.deviceid,
-            "access_token":tokens["access_token"],
-            "refresh_token":tokens["refresh_token"]
-        }
-    ) and database.insert(
-        "access_tokens",
-        {
-            "access_token":tokens["access_token"],
-            "validity_hours":VALIDITY_HOURS["access_token"]
-        }
-    ) and database.insert(
-        "refresh_tokens",
-        {
-            "refresh_token":tokens["refresh_token"],
-            "validity_hours":VALIDITY_HOURS["refresh_token"]
-        }
-    )
+    try:
+        with database.get_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cursor:
+                cursor.execute("BEGIN")
+                if (database.insert(
+                    cursor,
+                    "users",
+                    {
+                        "name":body.username,
+                        "email":body.email,
+                        "hash_password":password["hash"],
+                        "salt": password["salt"],
+                        "device_id":body.deviceid,
+                        "access_token":tokens["access_token"],
+                        "refresh_token":tokens["refresh_token"]
+                    }
+                ) and database.insert(
+                    cursor,
+                    "access_tokens",
+                    {
+                        "access_token":tokens["access_token"],
+                        "validity_hours":VALIDITY_HOURS["access_token"]
+                    }
+                ) and database.insert(
+                    cursor,
+                    "refresh_tokens",
+                    {
+                        "refresh_token":tokens["refresh_token"],
+                        "validity_hours":VALIDITY_HOURS["refresh_token"]
+                    }
+                )):
+                    conn.commit()
+                    return True
+                else:
+                    raise Exception
+    except Exception as e:
+        print(f"Error registering user: {e}")
+        if conn:
+            conn.rollback()
+            print("transaction rollback")
+        return False
 
 @router.post("/users", status_code=201)
 def users_register(body:RegisterRequest):
-    if not database.fetch("users", {"name":body.username}) == []:
-        raise HTTPException(status_code=409, detail="User already exists")
-    elif not database.fetch("users", {"email":body.email}) == []:
-        raise HTTPException(status_code=409, detail="Email already registered")
-    else:
-        password = { "salt":secrets.token_hex(128) }
-        password["hash"] = hashed.generate_hash(body.password, password["salt"])
-        tokens = {
-            "access_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32)),
-            "refresh_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(64))
+    with database.get_connection() as conn:
+        with conn.cursor(row_factory=dict_row) as cursor:
+            if not database.fetch(cursor,"users", {"name":body.username}) == []:
+                raise HTTPException(status_code=409, detail="User already exists")
+            elif not database.fetch(cursor,"users", {"email":body.email}) == []:
+                raise HTTPException(status_code=409, detail="Email already registered")
+
+    password = { "salt":secrets.token_hex(128) }
+    password["hash"] = hashed.generate_hash(body.password, password["salt"])
+    tokens = {
+        "access_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32)),
+        "refresh_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(64))
+    }
+    if not password["hash"] == None and register_user(body, password, tokens):
+        token_created = datetime.now(pytz.timezone('Asia/Tokyo'))
+        return {
+            "detail": "User registered",
+            "access_token": tokens["access_token"],
+            "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(),
+            "refresh_token": tokens["refresh_token"],
+            "refresh_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["refresh_token"])).isoformat()
         }
-        if not hash == None and register_user(body, password, tokens):
-            token_created = datetime.now(pytz.timezone('Asia/Tokyo'))
-            return {
-                "detail": "User registered",
-                "access_token": tokens["access_token"],
-                "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(),
-                "refresh_token": tokens["refresh_token"],
-                "refresh_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["refresh_token"])).isoformat()
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Error registering user")
+    else:
+        raise HTTPException(status_code=500, detail="Error registering user")

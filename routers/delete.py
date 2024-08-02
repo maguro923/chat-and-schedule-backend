@@ -4,8 +4,29 @@ from database.database import database
 from hashed import hashed
 from datetime import datetime, timedelta
 import pytz
+from psycopg.rows import dict_row
 
 router = APIRouter()
+
+def delete_user(user_name:str, headers:dict) -> bool:
+    try:
+        with database.get_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cursor:
+                cursor.execute("BEGIN")
+                if (database.delete(cursor,"users", {"name":user_name}) and
+                    database.delete(cursor,"access_tokens", {"access_token":headers['access_token']}) and
+                    database.delete(cursor,"refresh_tokens", {"refresh_token":headers['refresh_token']})
+                ):
+                    conn.commit()
+                    return True
+                else:
+                    raise Exception
+    except Exception as e:
+        print(f"Error deleting user: {e}")
+        if conn:
+            conn.rollback()
+            print("transaction rollback")
+        return False
 
 def get_headers(
     password: str = Header(...),
@@ -23,8 +44,10 @@ def users_delete(request:Request,user_name:str, headers:dict = Depends(get_heade
     print(headers)
     print(request.headers)
     try:
-        user = database.fetch("users", {"name": user_name})
-        token = database.fetch("access_tokens", {"access_token": headers['access_token']})
+        with database.get_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cursor:
+                user = database.fetch(cursor,"users", {"name": user_name})
+                token = database.fetch(cursor,"access_tokens", {"access_token": headers['access_token']})
     except Exception as e:
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
@@ -42,10 +65,7 @@ def users_delete(request:Request,user_name:str, headers:dict = Depends(get_heade
     
     #ユーザー情報の削除
     try:
-        if (database.delete("users", {"name":user_name}) and
-            database.delete("access_tokens", {"access_token":user[0]["access_token"]}) and
-            database.delete("refresh_tokens", {"refresh_token":user[0]["refresh_token"]})
-            ):
+        if delete_user(user_name, headers):
             return
         else:
             raise Exception
