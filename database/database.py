@@ -18,69 +18,93 @@ class Database:
 
     def get_connection(self):
         """接続プールから接続を取得"""
-        conn = self.pool.connection()
-        conn.autocommit = False
-        return conn
+        try:
+            conn = self.pool.connection()
+            conn.autocommit = False
+            return conn
+        except Exception as e:
+            print(f"Error getting connection: {e}")
+            return None
 
     def fetch_all_data(self, cursor, table: str) -> Optional[List[Dict]]:
-        query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(table))
-        cursor.execute(query)
-        return cursor.fetchall()
+        try:
+            query = sql.SQL("SELECT * FROM {}").format(sql.Identifier(table))
+            cursor.execute(query)
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching all data: {e}")
+            return None
 
     def fetch(self, cursor, table: str, filters: dict) -> Optional[List[Dict]]:
-        filter_clauses = []
-        values = []
-        for key, value in filters.items():
-            filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
-            values.append(value)
-        query = sql.SQL("SELECT * FROM {} WHERE {}").format(
-            sql.Identifier(table),
-            sql.SQL(" AND ").join(filter_clauses)
-        )
-        cursor.execute(query, values)
-        return cursor.fetchall()
+        try:
+            filter_clauses = []
+            values = []
+            for key, value in filters.items():
+                filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
+                values.append(value)
+            query = sql.SQL("SELECT * FROM {} WHERE {}").format(
+                sql.Identifier(table),
+                sql.SQL(" AND ").join(filter_clauses)
+            )
+            cursor.execute(query, values)
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+            return None
 
     def insert(self, cursor, table: str, data: dict) -> bool:
-        keys = data.keys()
-        values = list(data.values())
-        query = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
-            sql.Identifier(table),
-            sql.SQL(", ").join(map(sql.Identifier, keys)),
-            sql.SQL(", ").join(sql.Placeholder() * len(keys))
-        )
-        cursor.execute(query, values)
-        return True
+        try:
+            keys = data.keys()
+            values = list(data.values())
+            query = sql.SQL("INSERT INTO {} ({}) VALUES ({})").format(
+                sql.Identifier(table),
+                sql.SQL(", ").join(map(sql.Identifier, keys)),
+                sql.SQL(", ").join(sql.Placeholder() * len(keys))
+            )
+            cursor.execute(query, values)
+            return True
+        except Exception as e:
+            print(f"Error inserting data: {e}")
+            return False
 
     def update(self, cursor, table: str, data: dict, filters: dict) -> bool:
-        set_clauses = []
-        filter_clauses = []
-        values = []
-        for key, value in data.items():
-            set_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
-            values.append(value)
-        for key, value in filters.items():
-            filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
-            values.append(value)
-        query = sql.SQL("UPDATE {} SET {} WHERE {}").format(
-            sql.Identifier(table),
-            sql.SQL(", ").join(set_clauses),
-            sql.SQL(" AND ").join(filter_clauses)
-        )
-        cursor.execute(query, values)
-        return True
+        try:
+            set_clauses = []
+            filter_clauses = []
+            values = []
+            for key, value in data.items():
+                set_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
+                values.append(value)
+            for key, value in filters.items():
+                filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
+                values.append(value)
+            query = sql.SQL("UPDATE {} SET {} WHERE {}").format(
+                sql.Identifier(table),
+                sql.SQL(", ").join(set_clauses),
+                sql.SQL(" AND ").join(filter_clauses)
+            )
+            cursor.execute(query, values)
+            return True
+        except Exception as e:
+            print(f"Error updating data: {e}")
+            return False
 
     def delete(self, cursor, table: str, filters: dict) -> bool:
-        filter_clauses = []
-        values = []
-        for key, value in filters.items():
-            filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
-            values.append(value)
-        query = sql.SQL("DELETE FROM {} WHERE {}").format(
-            sql.Identifier(table),
-            sql.SQL(" AND ").join(filter_clauses)
-        )
-        cursor.execute(query, values)
-        return True
+        try:
+            filter_clauses = []
+            values = []
+            for key, value in filters.items():
+                filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
+                values.append(value)
+            query = sql.SQL("DELETE FROM {} WHERE {}").format(
+                sql.Identifier(table),
+                sql.SQL(" AND ").join(filter_clauses)
+            )
+            cursor.execute(query, values)
+            return True
+        except Exception as e:
+            print(f"Error deleting data: {e}")
+            return False
 
 database = Database()
 
