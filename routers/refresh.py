@@ -8,7 +8,7 @@ from config import VALIDITY_HOURS
 
 router = APIRouter()
 
-async def get_headers(
+def get_headers(
     refresh_token: str = Header(...),
     device_id: str = Header(...)
 ):
@@ -18,7 +18,7 @@ async def get_headers(
     return {"refresh_token": refresh_token, "device_id": device_id}
 
 @router.post("/auth/refresh", status_code=200)
-async def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header: refresh_token device_id
+def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header: refresh_token device_id
     user = []
     refresh_token = []
     try:

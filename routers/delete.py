@@ -7,7 +7,7 @@ import pytz
 
 router = APIRouter()
 
-async def get_headers(
+def get_headers(
     password: str = Header(...),
     device_id: str = Header(...),
     access_token: str = Header(...)
@@ -17,7 +17,7 @@ async def get_headers(
     return {"password": password, "device_id": device_id, "access_token": access_token}
 
 @router.delete("/users/{user_name}", status_code=204)
-async def users_delete(request:Request,user_name:str, headers:dict = Depends(get_headers)):
+def users_delete(request:Request,user_name:str, headers:dict = Depends(get_headers)):
     user = []
     token = []
     print(headers)

@@ -72,7 +72,7 @@ def register_user(body:RegisterRequest, password:dict, tokens:dict) -> bool:
     )
 
 @router.post("/users", status_code=201)
-async def users_register(body:RegisterRequest):
+def users_register(body:RegisterRequest):
     if not database.fetch("users", {"name":body.username}) == []:
         raise HTTPException(status_code=409, detail="User already exists")
     elif not database.fetch("users", {"email":body.email}) == []:

@@ -16,7 +16,7 @@ class LoginRequest(BaseModel):
     password: str
     deviceid: str
 
-async def generate_tokens(user: LoginRequest, userdata, new_tokens):
+def generate_tokens(user: LoginRequest, userdata, new_tokens):
     try:
         #print(new_tokens["access_token"])
         return database.update(
@@ -37,7 +37,7 @@ async def generate_tokens(user: LoginRequest, userdata, new_tokens):
         return False
 
 @router.post("/auth/login", status_code=200)
-async def users_login(user:LoginRequest):
+def users_login(user:LoginRequest):
     userdata = []
     try:
         userdata = database.fetch("users", {"name": user.username})
@@ -53,7 +53,7 @@ async def users_login(user:LoginRequest):
                 "access_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32)),
                 "refresh_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(64))
             }
-            if await generate_tokens(user, userdata, new_tokens):
+            if generate_tokens(user, userdata, new_tokens):
                 #a=database.fetch("access_tokens", {"access_token":new_tokens["access_token"]})
                 print(new_tokens["access_token"])
                 #print(a)

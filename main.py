@@ -80,7 +80,7 @@ async def websocket_endpoint(ws: WebSocket):
 """
 
 @app.exception_handler(RequestValidationError)
-async def validation_handler(request, exc):
+def validation_handler(request, exc):
     error_lists = []
     for e in exc.errors():#エラーメッセージの抽出
         if 'ctx' in e and 'error' in e['ctx']:
