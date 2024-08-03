@@ -8,6 +8,7 @@ import pytz
 from typing_extensions import Annotated
 from config import VALIDITY_HOURS
 import re
+from uuid import uuid4
 from psycopg.rows import dict_row
 
 import string
@@ -46,7 +47,7 @@ class RegisterRequest(BaseModel):
     deviceid: str
 
 
-def register_user(body:RegisterRequest, password:dict, tokens:dict) -> bool:
+def register_user(body:RegisterRequest, password:dict, tokens:dict, id:string) -> bool:
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
@@ -55,6 +56,7 @@ def register_user(body:RegisterRequest, password:dict, tokens:dict) -> bool:
                     cursor,
                     "users",
                     {
+                        "id":id,
                         "name":body.username,
                         "email":body.email,
                         "hash_password":password["hash"],
@@ -93,9 +95,7 @@ def register_user(body:RegisterRequest, password:dict, tokens:dict) -> bool:
 def users_register(body:RegisterRequest):
     with database.get_connection() as conn:
         with conn.cursor(row_factory=dict_row) as cursor:
-            if not database.fetch(cursor,"users", {"name":body.username}) == []:
-                raise HTTPException(status_code=409, detail="User already exists")
-            elif not database.fetch(cursor,"users", {"email":body.email}) == []:
+            if not database.fetch(cursor,"users", {"email":body.email}) == []:
                 raise HTTPException(status_code=409, detail="Email already registered")
 
     password = { "salt":secrets.token_hex(128) }
@@ -104,10 +104,13 @@ def users_register(body:RegisterRequest):
         "access_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32)),
         "refresh_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(64))
     }
-    if not password["hash"] == None and register_user(body, password, tokens):
+    id = str(uuid4())
+    if not password["hash"] == None and register_user(body, password, tokens, id):
         token_created = datetime.now(pytz.timezone('Asia/Tokyo'))
+        print(id)
         return {
             "detail": "User registered",
+            "user_id": id,
             "access_token": tokens["access_token"],
             "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(),
             "refresh_token": tokens["refresh_token"],

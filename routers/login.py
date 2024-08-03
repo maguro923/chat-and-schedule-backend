@@ -13,7 +13,7 @@ from psycopg.rows import dict_row
 router = APIRouter()
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
     deviceid: str
 
@@ -26,7 +26,7 @@ def generate_tokens(user: LoginRequest, userdata, new_tokens):
                     cursor,
                     "users",
                     {"device_id":user.deviceid,"access_token":new_tokens["access_token"],"refresh_token":new_tokens["refresh_token"]},
-                    {"name":user.username}
+                    {"email":user.email}
                 ) and database.update(
                     cursor,
                     "access_tokens",
@@ -55,7 +55,7 @@ def users_login(user:LoginRequest):
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
-                userdata = database.fetch(cursor,"users", {"name": user.username})
+                userdata = database.fetch(cursor,"users", {"email": user.email})
     except Exception as e:
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
@@ -75,6 +75,8 @@ def users_login(user:LoginRequest):
                 token_created = datetime.now(pytz.timezone('Asia/Tokyo'))
                 return {
                     "detail": "Login successful",
+                    "user_name": userdata[0]["name"],
+                    "user_id": userdata[0]["id"],
                     "access_token": new_tokens["access_token"],
                     "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(),
                     "refresh_token": new_tokens["refresh_token"],

@@ -5,15 +5,16 @@ from hashed import hashed
 from datetime import datetime, timedelta
 import pytz
 from psycopg.rows import dict_row
+import psycopg
 
 router = APIRouter()
 
-def delete_user(user_name:str, user:dict) -> bool:
+def delete_user(user_id:str, user:dict) -> bool:
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
                 cursor.execute("BEGIN")
-                if (database.delete(cursor,"users", {"name":user_name}) and
+                if (database.delete(cursor,"users", {"id":user_id}) and
                     database.delete(cursor,"access_tokens", {"access_token":user[0]['access_token']}) and
                     database.delete(cursor,"refresh_tokens", {"refresh_token":user[0]['refresh_token']})
                 ):
@@ -37,17 +38,18 @@ def get_headers(
         raise HTTPException(status_code=400, detail="Invalid headers")
     return {"password": password, "device_id": device_id, "access_token": access_token}
 
-@router.delete("/users/{user_name}", status_code=204)
-def users_delete(request:Request,user_name:str, headers:dict = Depends(get_headers)):
+@router.delete("/users/{user_id}", status_code=204)
+def users_delete(request:Request,user_id:str, headers:dict = Depends(get_headers)):
     user = []
     token = []
-    print(headers)
-    print(request.headers)
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
-                user = database.fetch(cursor,"users", {"name": user_name})
+                user = database.fetch(cursor,"users", {"id": user_id})
                 token = database.fetch(cursor,"access_tokens", {"access_token": headers['access_token']})
+    except psycopg.errors.InvalidTextRepresentation as e:
+        print(f"Error fetching user data: {e}")
+        raise HTTPException(status_code=400, detail="Invalid user_id type")
     except Exception as e:
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
@@ -65,7 +67,7 @@ def users_delete(request:Request,user_name:str, headers:dict = Depends(get_heade
     
     #ユーザー情報の削除
     try:
-        if delete_user(user_name, user):
+        if delete_user(user_id, user):
             return
         else:
             raise Exception
