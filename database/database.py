@@ -24,7 +24,7 @@ class Database:
             return conn
         except Exception as e:
             print(f"Error getting connection: {e}")
-            return None
+            raise e
 
     def fetch_all_data(self, cursor, table: str) -> Optional[List[Dict]]:
         try:
@@ -33,7 +33,7 @@ class Database:
             return cursor.fetchall()
         except Exception as e:
             print(f"Error fetching all data: {e}")
-            return None
+            raise e
 
     def fetch(self, cursor, table: str, filters: dict) -> Optional[List[Dict]]:
         try:
@@ -50,8 +50,8 @@ class Database:
             return cursor.fetchall()
         except Exception as e:
             print(f"Error fetching data: {e}")
-            return None
-
+            raise e
+    
     def insert(self, cursor, table: str, data: dict) -> bool:
         try:
             keys = data.keys()
