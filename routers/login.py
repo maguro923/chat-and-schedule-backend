@@ -59,7 +59,7 @@ def users_login(user:LoginRequest):
     except Exception as e:
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
-    #print(userdata[0])
+    
     if userdata == []:#ユーザーが存在しない場合
         raise HTTPException(status_code=401, detail="User not found")
     if hashed.verify_pw(user.password, userdata[0]["hash_password"], userdata[0]["salt"]):#ユーザーが存在する場合
