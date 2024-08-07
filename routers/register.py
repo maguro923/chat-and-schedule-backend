@@ -106,7 +106,7 @@ def users_register(body:RegisterRequest):
     }
     id = str(uuid4())
     if not password["hash"] == None and register_user(body, password, tokens, id):
-        token_created = pytz.timezone('Asia/Tokyo').localize(datetime.now())
+        token_created = pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)
         print(id)
         return {
             "detail": "User registered",

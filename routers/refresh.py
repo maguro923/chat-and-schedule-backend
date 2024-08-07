@@ -56,7 +56,7 @@ def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header:
         raise HTTPException(status_code=401, detail="refresh_token not found")
     
     #リフレッシュトークンの有効期限の確認
-    if not pytz.timezone('Asia/Tokyo').localize(datetime.now()) < refresh_token[0]["created_at"]+timedelta(hours=refresh_token[0]["validity_hours"]):
+    if not pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9) < refresh_token[0]["created_at"]+timedelta(hours=refresh_token[0]["validity_hours"]):
         raise HTTPException(status_code=403, detail="refresh_token expired")
     
     #デバイスIDの確認(同一デバイスであるか)
@@ -67,7 +67,8 @@ def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header:
     try:
         new_access_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32))
         if generate_tokens(user, new_access_token, headers):
-            token_created = pytz.timezone('Asia/Tokyo').localize(datetime.now())
+            token_created = pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)
+            print(token_created)
             return {
                 "detail": "access_token regenerated",
                 "access_token": new_access_token,
