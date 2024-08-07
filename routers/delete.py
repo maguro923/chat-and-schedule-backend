@@ -59,7 +59,7 @@ def users_delete(request:Request,user_id:str, headers:dict = Depends(get_headers
         
     #パスワードの確認及びアクセストークンの有効期限の確認及びデバイスIDの確認(同一デバイスであるか)
     if (not user[0]["access_token"] == headers['access_token'] or 
-        not datetime.now(pytz.timezone('Asia/Tokyo')) < token[0]["created_at"]+timedelta(hours=token[0]["validity_hours"]) or 
+        not pytz.timezone('Asia/Tokyo').localize(datetime.now()) < token[0]["created_at"]+timedelta(hours=token[0]["validity_hours"]) or 
         not hashed.verify_pw(headers['password'], user[0]["hash_password"], user[0]["salt"]) or
         not user[0]["device_id"] == headers['device_id']
         ):

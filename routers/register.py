@@ -106,15 +106,15 @@ def users_register(body:RegisterRequest):
     }
     id = str(uuid4())
     if not password["hash"] == None and register_user(body, password, tokens, id):
-        token_created = datetime.now(pytz.timezone('Asia/Tokyo'))
+        token_created = pytz.timezone('Asia/Tokyo').localize(datetime.now())
         print(id)
         return {
             "detail": "User registered",
             "user_id": id,
             "access_token": tokens["access_token"],
-            "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(),
+            "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(' '),
             "refresh_token": tokens["refresh_token"],
-            "refresh_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["refresh_token"])).isoformat()
+            "refresh_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["refresh_token"])).isoformat(' ')
         }
     else:
         raise HTTPException(status_code=500, detail="Error registering user")

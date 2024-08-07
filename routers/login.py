@@ -69,18 +69,15 @@ def users_login(user:LoginRequest):
                 "refresh_token": ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(64))
             }
             if generate_tokens(user, userdata, new_tokens):
-                #a=database.fetch("access_tokens", {"access_token":new_tokens["access_token"]})
-                print(new_tokens["access_token"])
-                #print(a)
-                token_created = datetime.now(pytz.timezone('Asia/Tokyo'))
+                token_created = pytz.timezone('Asia/Tokyo').localize(datetime.now())
                 return {
                     "detail": "Login successful",
                     "user_name": userdata[0]["name"],
                     "user_id": userdata[0]["id"],
                     "access_token": new_tokens["access_token"],
-                    "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(),
+                    "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(' '),
                     "refresh_token": new_tokens["refresh_token"],
-                    "refresh_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["refresh_token"])).isoformat()
+                    "refresh_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["refresh_token"])).isoformat(' ')
                 }
             else:
                 raise Exception
