@@ -24,7 +24,6 @@ class ConnectionManager:
             self.active_connections.append(websocket)
             self.active_users_id.append(user_id)
             self.latest_token_valid[user_id] = pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)
-        print(self.active_users_id)
 
     async def disconnect(self, websocket: WebSocket, user_id: str):
         print("disconnect")
@@ -100,4 +99,3 @@ async def websocket_endpoint(ws: WebSocket, user_id: str):
         await asyncio.gather(CheckToken, send, recv)
     except WebSocketDisconnect:
         await manager.disconnect(ws, user_id)
-        await manager.broadcast(f"Client left the chat")
