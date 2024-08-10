@@ -93,9 +93,10 @@ async def recv_msg(ws: WebSocket, user_id: str):
 async def websocket_endpoint(ws: WebSocket, user_id: str):
     await manager.connect(ws, user_id)
     try:
-        CheckToken = asyncio.create_task(check_token(ws, user_id))
-        send = asyncio.create_task(recv_msg(ws, user_id))
-        recv = asyncio.create_task(send_msg(ws, user_id))
-        await asyncio.gather(CheckToken, send, recv)
-    except WebSocketDisconnect:
+        async with asyncio.TaskGroup() as tg:
+            CheckToken = tg.create_task(check_token(ws, user_id))
+            Send = tg.create_task(recv_msg(ws, user_id))
+            Recv = tg.create_task(send_msg(ws, user_id))
+    except* WebSocketDisconnect as e:
+        print("ERROR:",e)
         await manager.disconnect(ws, user_id)
