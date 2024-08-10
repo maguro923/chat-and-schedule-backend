@@ -31,6 +31,10 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
             self.active_users_id.remove(user_id)
             del self.latest_token_valid[user_id]
+        try:
+            await websocket.close()
+        except Exception as e:
+            pass
         await manager.broadcast(f"Client left the chat")
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
@@ -87,7 +91,7 @@ async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
             pass
         except Exception as e:
             print(f"Error: {e}",type(e))
-            return
+            raise e
 
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(ws: WebSocket, user_id: str):
@@ -97,6 +101,8 @@ async def websocket_endpoint(ws: WebSocket, user_id: str):
             CheckToken = tg.create_task(check_token(ws, user_id))
             Send = tg.create_task(send_msg(ws, user_id))
             Recv = tg.create_task(recv_msg(ws, user_id, tg))
-    except* WebSocketDisconnect as e:
-        print("ERROR:",e)
+    except* WebSocketDisconnect:
+        await manager.disconnect(ws, user_id)
+    except* Exception as e:
+        print("ERROR:",repr(e))
         await manager.disconnect(ws, user_id)
