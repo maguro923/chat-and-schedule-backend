@@ -68,7 +68,7 @@ async def send_msg(ws: WebSocket, user_id: str):
         await manager.send_personal_message(message, ws)
         await asyncio.sleep(360)
 
-async def recv_msg(ws: WebSocket, user_id: str):
+async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
     """
     メッセージの受信及び形式の確認等を行う
     """
@@ -95,8 +95,8 @@ async def websocket_endpoint(ws: WebSocket, user_id: str):
     try:
         async with asyncio.TaskGroup() as tg:
             CheckToken = tg.create_task(check_token(ws, user_id))
-            Send = tg.create_task(recv_msg(ws, user_id))
-            Recv = tg.create_task(send_msg(ws, user_id))
+            Send = tg.create_task(send_msg(ws, user_id))
+            Recv = tg.create_task(recv_msg(ws, user_id, tg))
     except* WebSocketDisconnect as e:
         print("ERROR:",e)
         await manager.disconnect(ws, user_id)
