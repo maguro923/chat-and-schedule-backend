@@ -15,7 +15,7 @@ class ConnectionManager:
     websocketの接続管理を行う
     """
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
+        self.active_connections: Dict[str,WebSocket] = {}
         self.active_users_id: List[str] = []
         self.latest_token_valid: Dict[str, datetime] = {}
         self.lock = asyncio.Lock()
@@ -23,31 +23,26 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, user_id: str):
         await websocket.accept()
         async with self.lock:
-            self.active_connections.append(websocket)
+            self.active_connections[user_id] = websocket
             self.active_users_id.append(user_id)
             self.latest_token_valid[user_id] = pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)
 
     async def disconnect(self, websocket: WebSocket, user_id: str):
         print("disconnect")
         async with self.lock:
-            self.active_connections.remove(websocket)
-            self.active_users_id.remove(user_id)
-            del self.latest_token_valid[user_id]
+            if user_id in self.active_connections:
+                del self.active_connections[user_id]
+            if user_id in self.active_users_id:
+                self.active_users_id.remove(user_id)
+            if user_id in self.latest_token_valid:
+                del self.latest_token_valid[user_id]
         try:
             await websocket.close()
         except Exception as e:
             pass
-        await manager.broadcast(f"Client left the chat")
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
         await websocket.send_json(message)
-
-    async def broadcast(self, message: str, websocket=None):
-        for connection in self.active_connections:
-            if websocket != None and connection == websocket:
-                continue
-            await connection.send_json(message)
-
 
 manager = ConnectionManager()
 
@@ -60,6 +55,7 @@ async def ReAuth(ws: WebSocket, user_id: str, data: Dict):
         if (not "access_token" in content.keys() or
             not "device_id" in content.keys()):
             raise KeyError
+
     try:
         msg_key_check(data)
     except Exception as e:
