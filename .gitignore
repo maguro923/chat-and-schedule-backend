@@ -138,3 +138,5 @@ cython_debug/
 
 # Ignore VSCode settings
 .vscode/
+
+firebase-adminsdk-key.json

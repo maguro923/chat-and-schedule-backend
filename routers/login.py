@@ -16,6 +16,7 @@ class LoginRequest(BaseModel):
     email: str
     password: str
     deviceid: str
+    fcmtoken: str
 
 def generate_tokens(user: LoginRequest, userdata, new_tokens):
     try:
@@ -25,7 +26,7 @@ def generate_tokens(user: LoginRequest, userdata, new_tokens):
                 if database.update(
                     cursor,
                     "users",
-                    {"device_id":user.deviceid,"access_token":new_tokens["access_token"],"refresh_token":new_tokens["refresh_token"]},
+                    {"device_id":user.deviceid,"access_token":new_tokens["access_token"],"refresh_token":new_tokens["refresh_token"],"fcm_token":user.fcmtoken},
                     {"email":user.email}
                 ) and database.update(
                     cursor,

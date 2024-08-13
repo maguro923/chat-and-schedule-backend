@@ -45,7 +45,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: Annotated[str,AfterValidator(password_validator)]
     deviceid: str
-
+    fcmtoken: str
 
 def register_user(body:RegisterRequest, password:dict, tokens:dict, id:string) -> bool:
     try:
@@ -62,6 +62,7 @@ def register_user(body:RegisterRequest, password:dict, tokens:dict, id:string) -
                         "hash_password":password["hash"],
                         "salt": password["salt"],
                         "device_id":body.deviceid,
+                        "fcm_token":body.fcmtoken,
                         "access_token":tokens["access_token"],
                         "refresh_token":tokens["refresh_token"]
                     }
