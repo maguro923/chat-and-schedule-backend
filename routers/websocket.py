@@ -8,6 +8,8 @@ import pytz
 from websocket.reauth import ReAuth
 from websocket.sendmessage import SendMessage
 from websocket.manager import manager
+from websocket.room import JoinRoom, CreateRoom, LeaveRoom
+#from websocket.friend import FriendRequest
 
 router = APIRouter()
 
@@ -44,6 +46,14 @@ async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
                 tg.create_task(ReAuth(ws, user_id, data))
             elif data["type"] == "SendMessage":
                 tg.create_task(SendMessage(ws, user_id, data))
+            elif data["type"] == "CreateRoom":
+                tg.create_task(CreateRoom(ws, user_id, data))
+            elif data["type"] == "JoinRoom":
+                tg.create_task(JoinRoom(ws, user_id, data))
+            elif data["type"] == "LeaveRoom":
+                tg.create_task(LeaveRoom(ws, user_id, data))
+            #elif data["type"] == "FriendRequest":
+            #    tg.create_task(FriendRequest(ws, user_id, data))
             else:
                 await manager.send_personal_message({"id":data["id"],"type":f"reply-{data['type']}","content":{"message":"Invalid message type"}}, ws)
         except WebSocketDisconnect:

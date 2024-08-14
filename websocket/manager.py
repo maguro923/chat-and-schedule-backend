@@ -14,6 +14,7 @@ class ConnectionManager:
         self.active_connections: Dict[str,WebSocket] = {}
         self.active_users_id: List[str] = []
         self.latest_token_valid: Dict[str, datetime] = {}
+        self.friend_requests: Dict[str, set] = {}
         self.lock = asyncio.Lock()
 
     async def connect(self, websocket: WebSocket, user_id: str):
