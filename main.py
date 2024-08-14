@@ -2,6 +2,11 @@ from fastapi import FastAPI
 from routers import login, register, delete, refresh, websocket
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+import firebase_admin
+from firebase_admin import credentials
+
+cred = credentials.Certificate("./firebase-adminsdk-key.json")
+firebase_admin.initialize_app(cred)
 
 app = FastAPI()
 

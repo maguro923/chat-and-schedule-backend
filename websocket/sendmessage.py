@@ -4,6 +4,7 @@ from database.database import database
 from psycopg.rows import dict_row
 from uuid import uuid4
 from websocket.manager import manager
+from firebase_admin import messaging
 
 async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
     """
@@ -29,7 +30,7 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
             if str(participant["user_id"]) == user_id:
                 return True
         return False
-    
+
     try:
         if not "type" in data["content"].keys():
             raise KeyError
@@ -86,17 +87,44 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
             if str(participant["user_id"]) in manager.active_connections and not str(participant["user_id"]) == user_id:
                 #送信先のユーザーが接続中の場合
                 print(f"send message to {participant['user_id']}")
+                msg_type = ""
+                msg = ""
+                if data["content"]["type"] == "text":
+                    msg_type = "text"
+                    msg = data["content"]["message"]
+                elif data["content"]["type"] == "image":
+                    msg_type = "image"
+                    msg = data["content"]["image"]
                 await manager.send_personal_message({
                     "type":"ReceiveMessage",
                     "content":{
                         "roomid":data["content"]["roomid"],
-                        "sender_id":user_id,
-                        "type":data["content"]["type"]
+                        "senderid":user_id,
+                        "type":data["content"]["type"],
+                        msg_type:msg
                     }},
                     manager.active_connections[str(participant["user_id"])])
             elif not str(participant["user_id"]) == user_id:
                 #送信先のユーザーが接続中でない場合
-                print(f"User {participant['user_id']} is not connected")
+                print(f"{participant['user_id']} is offline")
         except Exception as e:
             print(f"Error sending message: {e}")
             pass
+    try:
+        bodytext = ""
+        if data["content"]["type"] == "text":
+            bodytext = data["content"]["message"]
+        elif data["content"]["type"] == "image":
+            bodytext = "写真が送信されました"
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title="新しいメッセージ",
+                body=bodytext
+            ),
+            topic=data["content"]["roomid"]
+        )
+        response = messaging.send(message)
+        print(response)
+    except Exception as e:
+        print(f"Error sending FCM notifiction: {e}")
+        pass
