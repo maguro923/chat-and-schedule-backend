@@ -51,6 +51,44 @@ class Database:
         except Exception as e:
             print(f"Error fetching data: {e}")
             raise e
+        
+    def fetch_before_datetime(self, cursor, table:str, filters: dict, datetime_column: str, datetime: str) -> Optional[List[Dict]]:
+        try:
+            filter_clauses = []
+            values = []
+            for key, value in filters.items():
+                filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
+                values.append(value)
+            values.append(datetime)
+            query = sql.SQL("SELECT * FROM {} WHERE {} AND {} <= %s").format(
+                sql.Identifier(table),
+                sql.SQL(" AND ").join(filter_clauses),
+                sql.Identifier(datetime_column)
+            )
+            cursor.execute(query, values)
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+            raise e
+    
+    def fetch_after_datetime(self, cursor, table:str, filters: dict, datetime_column: str, datetime: str) -> Optional[List[Dict]]:
+        try:
+            filter_clauses = []
+            values = []
+            for key, value in filters.items():
+                filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
+                values.append(value)
+            values.append(datetime)
+            query = sql.SQL("SELECT * FROM {} WHERE {} AND {} > %s").format(
+                sql.Identifier(table),
+                sql.SQL(" AND ").join(filter_clauses),
+                sql.Identifier(datetime_column)
+            )
+            cursor.execute(query, values)
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+            raise e
     
     def insert(self, cursor, table: str, data: dict) -> bool:
         try:
