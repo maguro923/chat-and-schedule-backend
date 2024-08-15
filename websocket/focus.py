@@ -5,8 +5,6 @@ import pytz
 from database.database import database
 from psycopg.rows import dict_row
 from websocket.manager import manager
-from firebase_admin import messaging
-from uuid import uuid4
 
 
 async def Focus(ws: WebSocket, user_id: str, data: Dict):
