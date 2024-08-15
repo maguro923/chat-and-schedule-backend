@@ -13,8 +13,9 @@ class ConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str,WebSocket] = {}
         self.active_users_id: List[str] = []
+        self.focus_room: Dict[str, str] = {}
         self.latest_token_valid: Dict[str, datetime] = {}
-        self.friend_requests: Dict[str, set] = {}
+        self.friend_requests: Dict[str, str] = {}
         self.lock = asyncio.Lock()
 
     async def connect(self, websocket: WebSocket, user_id: str):
