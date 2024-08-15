@@ -9,11 +9,11 @@ from websocket.reauth import ReAuth
 from websocket.sendmessage import SendMessage
 from websocket.manager import manager
 from websocket.room import JoinRoom, CreateRoom, LeaveRoom
-#from websocket.friend import FriendRequest
+from websocket.friend import Friend,UnFriend
 
 router = APIRouter()
 
-async def check_token(ws: WebSocket, user_id: str):
+async def check_token_exprire(ws: WebSocket, user_id: str):
     """
     アクセストークンの有効期限を確認し、有効期限が切れた場合に切断する
     """
@@ -52,8 +52,10 @@ async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
                 tg.create_task(JoinRoom(ws, user_id, data))
             elif data["type"] == "LeaveRoom":
                 tg.create_task(LeaveRoom(ws, user_id, data))
-            #elif data["type"] == "FriendRequest":
-            #    tg.create_task(FriendRequest(ws, user_id, data))
+            elif data["type"] == "Friend":
+                tg.create_task(Friend(ws, user_id, data))
+            elif data["type"] == "UnFriend":
+                tg.create_task(UnFriend(ws, user_id, data))
             else:
                 await manager.send_personal_message({"id":data["id"],"type":f"reply-{data['type']}","content":{"message":"Invalid message type"}}, ws)
         except WebSocketDisconnect:
@@ -81,7 +83,7 @@ async def websocket_endpoint(ws: WebSocket, user_id: str):
     await manager.connect(ws, user_id)
     try:
         async with asyncio.TaskGroup() as tg:
-            CheckToken = tg.create_task(check_token(ws, user_id))
+            CheckToken = tg.create_task(check_token_exprire(ws, user_id))
             Recv = tg.create_task(recv_msg(ws, user_id, tg))
     except* WebSocketDisconnect:
         await manager.disconnect(ws, user_id)
