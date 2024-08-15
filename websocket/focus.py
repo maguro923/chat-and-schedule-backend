@@ -31,7 +31,6 @@ async def Focus(ws: WebSocket, user_id: str, data: Dict):
                     return
                 
                 if user_id in manager.focus_room and manager.focus_room[user_id] == data["content"]["roomid"]:
-                    print(manager.focus_room)
                     await manager.send_personal_message({"id":data["id"],"type":"reply-Focus","content":{"message":"Already focused"}}, ws)
                     return
                 elif user_id in manager.focus_room and manager.focus_room[user_id] != "":
@@ -44,7 +43,6 @@ async def Focus(ws: WebSocket, user_id: str, data: Dict):
                     conn.commit()
                 else:
                     manager.focus_room[user_id] = data["content"]["roomid"]
-                print(manager.focus_room)
                 await manager.send_personal_message({"id":data["id"],"type":"reply-Focus","content":{"message":"Focused"}}, ws)
     except Exception as e:
         print(f"Error fetching room data: {e}")
@@ -78,7 +76,6 @@ async def UnFocus(ws: WebSocket, user_id: str, data: Dict):
                     return
                 
                 if (user_id in manager.focus_room and manager.focus_room[user_id] == "")or(not user_id in manager.focus_room):
-                    print(manager.focus_room)
                     await manager.send_personal_message({"id":data["id"],"type":"reply-UnFocus","content":{"message":"Already unfocused"}}, ws)
                     return
                 elif user_id in manager.focus_room and manager.focus_room[user_id] != "":
@@ -89,7 +86,6 @@ async def UnFocus(ws: WebSocket, user_id: str, data: Dict):
                         raise Exception
                     manager.focus_room[user_id] = ""
                     conn.commit()
-                print(manager.focus_room)
                 await manager.send_personal_message({"id":data["id"],"type":"reply-UnFocus","content":{"message":"Unfocused"}}, ws)
     except Exception as e:
         print(f"Error fetching room data: {e}")
