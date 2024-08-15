@@ -1,7 +1,5 @@
 from fastapi import WebSocket
 from typing import Dict
-from datetime import datetime, timedelta
-import pytz
 from database.database import database
 from psycopg.rows import dict_row
 from websocket.manager import manager

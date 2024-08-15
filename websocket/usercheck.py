@@ -1,8 +1,4 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Response
-from typing import Dict
-import asyncio
-import json
-from config import VALIDITY_HOURS
+from fastapi import WebSocket, Response
 from datetime import datetime, timedelta
 import pytz
 import uuid
