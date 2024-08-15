@@ -5,9 +5,10 @@ import json
 from config import VALIDITY_HOURS
 from datetime import datetime, timedelta
 import pytz
+from websocket.manager import manager
+from websocket.usercheck import check_user_id, check_access_token
 from websocket.reauth import ReAuth
 from websocket.sendmessage import SendMessage
-from websocket.manager import manager
 from websocket.room import JoinRoom, CreateRoom, LeaveRoom
 from websocket.friend import Friend,UnFriend
 
@@ -80,6 +81,16 @@ async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
 
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(ws: WebSocket, user_id: str):
+    #ユーザーIDを確認
+    is_valid_user_id,access_token = await check_user_id(ws,user_id)
+    if not is_valid_user_id:
+        return
+    
+    #アクセストークンを確認
+    if not await check_access_token(ws, user_id, access_token):
+        return
+    
+    #認証成功
     await manager.connect(ws, user_id)
     try:
         async with asyncio.TaskGroup() as tg:
