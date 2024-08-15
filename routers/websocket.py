@@ -6,6 +6,7 @@ from config import VALIDITY_HOURS
 from datetime import datetime, timedelta
 import pytz
 from websocket.manager import manager
+from websocket.getlatestmsg import get_latest_message
 from websocket.usercheck import check_user_id, check_access_token
 from websocket.reauth import ReAuth
 from websocket.sendmessage import SendMessage
@@ -99,6 +100,7 @@ async def websocket_endpoint(ws: WebSocket, user_id: str):
     await manager.connect(ws, user_id)
     try:
         async with asyncio.TaskGroup() as tg:
+            GetLatestMessage = tg.create_task(get_latest_message(ws, user_id))
             CheckToken = tg.create_task(check_token_exprire(ws, user_id))
             Recv = tg.create_task(recv_msg(ws, user_id, tg))
     except* WebSocketDisconnect:
