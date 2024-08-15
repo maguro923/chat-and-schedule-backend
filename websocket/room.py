@@ -276,5 +276,3 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
             print("transaction rollback")
         await manager.send_personal_message({"id":data["id"],"type":"reply-LeaveRoom","content":{"message":"Error leaving room"}}, ws)
         return
-
-    
