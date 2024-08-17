@@ -20,6 +20,8 @@ class ConnectionManager:
 
     async def connect(self, websocket: WebSocket, user_id: str):
         await websocket.accept()
+    
+    async def verified_connect(self, websocket: WebSocket, user_id: str):
         async with self.lock:
             self.active_connections[user_id] = websocket
             self.active_users_id.append(user_id)

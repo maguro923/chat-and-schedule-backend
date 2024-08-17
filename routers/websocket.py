@@ -87,17 +87,25 @@ async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
 
 @router.websocket("/ws/{user_id}")
 async def websocket_endpoint(ws: WebSocket, user_id: str):
-    #ユーザーIDを確認
-    is_valid_user_id,access_token = await check_user_id(ws,user_id)
-    if not is_valid_user_id:
-        return
-    
-    #アクセストークンを確認
-    if not await check_access_token(ws, user_id, access_token):
-        return
-    
-    #認証成功
     await manager.connect(ws, user_id)
+    try:
+        raw_data = await ws.receive_text()
+        data = json.loads(raw_data)
+        is_check_user_id,user_access_token = await check_user_id(ws, user_id)
+        if not is_check_user_id:
+            await ws.close()
+            return
+        if not await check_access_token(ws, data, user_access_token):
+            await ws.close()
+            return
+    except Exception as e:
+        print(f"Error: {e}")
+        await ws.close()
+        return
+
+    #認証成功
+    await manager.verified_connect(ws, user_id)
+    await manager.send_personal_message({"type":"reply-init","content":{"status":"200","message":"Connection established"}},ws)
     try:
         async with asyncio.TaskGroup() as tg:
             GetLatestMessage = tg.create_task(get_latest_message(ws, user_id))
