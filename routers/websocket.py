@@ -13,6 +13,7 @@ from websocket.sendmessage import SendMessage
 from websocket.room import JoinRoom, CreateRoom, LeaveRoom
 from websocket.friend import Friend,UnFriend
 from websocket.focus import Focus, UnFocus
+from websocket.getroomsinfo import GetRoomsInfo
 
 router = APIRouter()
 
@@ -63,6 +64,8 @@ async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
                 tg.create_task(Focus(ws, user_id, data))
             elif data["type"] == "UnFocus":
                 tg.create_task(UnFocus(ws, user_id, data))
+            elif data["type"] == "GetRoomsInfo":
+                tg.create_task(GetRoomsInfo(ws, user_id, data))
             else:
                 await manager.send_personal_message({"id":data["id"],"type":f"reply-{data['type']}","content":{"message":"Invalid message type"}}, ws)
         except WebSocketDisconnect:
