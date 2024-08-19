@@ -6,6 +6,7 @@ import string
 import secrets
 from config import VALIDITY_HOURS
 from psycopg.rows import dict_row
+import psycopg
 
 router = APIRouter()
 
@@ -46,6 +47,9 @@ def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header:
             with conn.cursor(row_factory=dict_row) as cursor:
                 user = database.fetch(cursor,"users", {"refresh_token": headers['refresh_token']})
                 refresh_token = database.fetch(cursor,"refresh_tokens", {"refresh_token": headers['refresh_token']})
+    except psycopg.errors.InvalidTextRepresentation as e:
+        print(f"Error fetching user data: {e}")
+        raise HTTPException(status_code=400, detail="Invalid user_id type")
     except Exception as e:
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
