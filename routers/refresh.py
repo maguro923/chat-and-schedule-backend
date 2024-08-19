@@ -33,7 +33,6 @@ def get_headers(
     refresh_token: str = Header(...),
     device_id: str = Header(...)
 ):
-    print("headers:",refresh_token, device_id)
     if not refresh_token or not device_id:
         raise HTTPException(status_code=422, detail="Invalid headers")
     return {"refresh_token": refresh_token, "device_id": device_id}
