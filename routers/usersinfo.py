@@ -60,7 +60,7 @@ def userdinfo(request:Request, headers:dict = Depends(get_headers)):
                     if user == []:
                         raise HTTPException(status_code=404, detail="Participant not found")
                     user_info["name"] = str(user[0]["name"])
-                    avatar_path = f"/avatars/users/{user[0]["avatar_path"]}"
+                    avatar_path = f"/avatars/users{user[0]["avatar_path"]}"
                     user_info["avatar_path"] = avatar_path
                     #ユーザが友達かどうかの確認
                     is_friend = database.fetch(cursor,"friendships", {"id": headers['user_id'], "friend_id": participant_id})
