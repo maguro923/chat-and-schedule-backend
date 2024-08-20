@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 import pytz
 from psycopg.rows import dict_row
 import psycopg
+import os
+import shutil
 
 router = APIRouter()
 
@@ -18,6 +20,8 @@ def delete_user(user_id:str, user:dict) -> bool:
                     database.delete(cursor,"access_tokens", {"access_token":user[0]['access_token']}) and
                     database.delete(cursor,"refresh_tokens", {"refresh_token":user[0]['refresh_token']})
                 ):
+                    if os.path.isdir(f"../avatars/users/{user_id}"):
+                        shutil.rmtree(f"../avatars/users/{user_id}")
                     conn.commit()
                     return True
                 else:

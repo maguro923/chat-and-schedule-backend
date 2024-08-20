@@ -5,6 +5,8 @@ from psycopg.rows import dict_row
 from websocket.manager import manager
 from firebase_admin import messaging
 from uuid import uuid4
+import os
+import shutil
 
 async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
     """
@@ -246,6 +248,8 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
                     if (not database.delete(cursor,"rooms", {"id":data["content"]["roomid"]}) or
                         not database.delete(cursor,"messages", {"room_id":data["content"]["roomid"]})):
                         raise Exception
+                    if os.path.isdir(f"../avatars/rooms/{data["content"]["roomid"]}"):
+                        shutil.rmtree(f"../avatars/rooms/{data["content"]["roomid"]}")
                     await manager.send_personal_message({"id":data["id"],"type":"reply-LeaveRoom","content":{"message":"Delete Room"}}, ws)
                 else:
                     #ユーザーに退出を送信

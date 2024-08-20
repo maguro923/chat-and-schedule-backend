@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import login, register, delete, refresh, websocket, usersinfo
+from routers import login, register, delete, refresh, websocket, usersinfo, avatar
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import firebase_admin
@@ -45,3 +45,4 @@ app.include_router(delete.router)
 app.include_router(refresh.router)
 app.include_router(websocket.router)
 app.include_router(usersinfo.router)
+app.include_router(avatar.router)

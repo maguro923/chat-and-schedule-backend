@@ -140,3 +140,8 @@ cython_debug/
 .vscode/
 
 firebase-adminsdk-key.json
+
+/avatars/rooms/*
+/avatars/users/*
+!/avatars/rooms/default.png
+!/avatars/users/default.png
