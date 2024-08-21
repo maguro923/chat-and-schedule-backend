@@ -111,6 +111,7 @@ def users_register(body:RegisterRequest):
         return {
             "detail": "User registered",
             "user_id": id,
+            "avatar_path": f"/avatars/users/default.png",
             "access_token": tokens["access_token"],
             "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(' '),
             "refresh_token": tokens["refresh_token"],

@@ -75,6 +75,7 @@ def users_login(user:LoginRequest):
                     "detail": "Login successful",
                     "user_name": userdata[0]["name"],
                     "user_id": userdata[0]["id"],
+                    "avatar_path": f"/avatars/users{userdata[0]['avatar_path']}",
                     "access_token": new_tokens["access_token"],
                     "access_token_expires": (token_created+timedelta(hours=VALIDITY_HOURS["access_token"])).isoformat(' '),
                     "refresh_token": new_tokens["refresh_token"],
