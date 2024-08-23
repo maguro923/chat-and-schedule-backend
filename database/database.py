@@ -143,6 +143,27 @@ class Database:
         except Exception as e:
             print(f"Error deleting data: {e}")
             return False
+        
+
+    def like(self, cursor, table: str, filters: dict, like_filteers: dict) -> Optional[List[Dict]]:
+        try:
+            filter_clauses = []
+            values = []
+            for key, value in filters.items():
+                filter_clauses.append(sql.SQL("{} = %s").format(sql.Identifier(key)))
+                values.append(value)
+            for key, value in like_filteers.items():
+                filter_clauses.append(sql.SQL("{} LIKE %s").format(sql.Identifier(key)))
+                values.append(f'%{value}%')
+            query = sql.SQL("SELECT * FROM {} WHERE {}").format(
+                sql.Identifier(table),
+                sql.SQL(" AND ").join(filter_clauses)
+            )
+            cursor.execute(query, values)
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+            raise e
 
 database = Database()
 
