@@ -7,6 +7,8 @@ from firebase_admin import messaging
 from uuid import uuid4
 import os
 import shutil
+from datetime import datetime, timedelta
+import pytz
 
 async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
     """
@@ -36,6 +38,7 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
         await manager.send_personal_message({"id":data["id"],"type":"reply-JoinRoom","content":{"message":"Invalid message format"}}, ws)
         return
     
+    msg_id = str(uuid4())
     room_participants = []
     try:
         with database.get_connection() as conn:
@@ -62,7 +65,7 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
                     raise Exception
                 user_data = database.fetch(cursor,"users", {"id":user_id})
                 join_message = f"{user_data[0]['name']} が参加しました"
-                if not database.insert(cursor,"messages", {"id":uuid4(),"room_id":data["content"]["roomid"],"type":"system","content":join_message}):
+                if not database.insert(cursor,"messages", {"id":msg_id,"room_id":data["content"]["roomid"],"type":"system","content":join_message}):
                     raise Exception
                 
                 #FCMのトピックに参加
@@ -80,9 +83,11 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
                                 await manager.send_personal_message(
                                     {"type":"ReceiveMessage",
                                      "content":{
+                                        "id":msg_id,
                                         "roomid":data["content"]["roomid"],
                                         "type":"system",
-                                        "message":join_message}},
+                                        "message":join_message,
+                                        "created_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9))}},
                                     manager.active_connections[str(participant["user_id"])])
                 except Exception as e:
                     print(f"Error sending join message: {e}")

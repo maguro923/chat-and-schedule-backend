@@ -5,6 +5,8 @@ from psycopg.rows import dict_row
 from uuid import uuid4
 from websocket.manager import manager
 from firebase_admin import messaging
+import pytz
+from datetime import datetime, timedelta
 
 async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
     """
@@ -55,15 +57,16 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
         return
     
     #メッセージの保存
+    msg_id = str(uuid4())
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
                 cursor.execute("BEGIN")
                 if data["content"]["type"] == "text":
-                    if not database.insert(cursor,"messages", {"id":uuid4(),"room_id":data["content"]["roomid"],"sender_id":user_id,"type":"text","content":data["content"]["message"]}):
+                    if not database.insert(cursor,"messages", {"id":msg_id,"room_id":data["content"]["roomid"],"sender_id":user_id,"type":"text","content":data["content"]["message"]}):
                         raise Exception
                 elif data["content"]["type"] == "image":
-                    if not database.insert(cursor,"messages", {"id":uuid4(),"room_id":data["content"]["roomid"],"sender_id":user_id,"type":"image","content":data["content"]["image"]}):
+                    if not database.insert(cursor,"messages", {"id":msg_id,"room_id":data["content"]["roomid"],"sender_id":user_id,"type":"image","content":data["content"]["image"]}):
                         raise Exception
                 else:
                     raise Exception
@@ -98,10 +101,12 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
                 await manager.send_personal_message({
                     "type":"ReceiveMessage",
                     "content":{
+                        "id":msg_id,
                         "roomid":data["content"]["roomid"],
                         "senderid":user_id,
                         "type":data["content"]["type"],
-                        msg_type:msg
+                        msg_type:msg,
+                        "created_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9))
                     }},
                     manager.active_connections[str(participant["user_id"])])
             elif not str(participant["user_id"]) == user_id:
