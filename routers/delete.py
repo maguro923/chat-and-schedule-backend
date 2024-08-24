@@ -58,7 +58,7 @@ def users_delete(request:Request,user_id:str, headers:dict = Depends(get_headers
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
     
-    if user == [] or token == []:
+    if user == []:
         raise HTTPException(status_code=401, detail="User not found")
         
     #パスワードの確認及びアクセストークンの有効期限の確認及びデバイスIDの確認(同一デバイスであるか)

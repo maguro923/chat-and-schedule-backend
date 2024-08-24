@@ -39,7 +39,7 @@ def userdinfo(request:Request, headers:dict = Depends(get_headers)):
         print(f"Error fetching user data: {e}")
         raise HTTPException(status_code=500, detail="Error fetching user data")
     
-    if user == [] or token == []:
+    if user == []:
         raise HTTPException(status_code=401, detail="User not found")
 
     print(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9))
