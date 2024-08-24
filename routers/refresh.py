@@ -71,7 +71,6 @@ def users_refresh(request:Request, headers:dict = Depends(get_headers)):#header:
         new_access_token = ''.join(secrets.choice(string.ascii_letters + string.digits) for i in range(32))
         if generate_tokens(user, new_access_token, headers):
             token_created = pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)
-            print(token_created)
             return {
                 "detail": "access_token regenerated",
                 "access_token": new_access_token,
