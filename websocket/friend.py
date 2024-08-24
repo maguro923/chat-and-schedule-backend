@@ -103,7 +103,9 @@ async def Friend(ws: WebSocket, user_id: str, data: Dict):
             #websocket通信中なら通知
             if data["content"]["friend_id"] in manager.active_connections:
                 friend_ws = manager.active_connections[data["content"]["friend_id"]]
-                await manager.send_personal_message({"type":"FriendRequest","content":{"friend_id":user_id}},friend_ws)
+                id_list = []
+                id_list.append(user_id)
+                await manager.send_personal_message({"type":"FriendRequest","content":id_list},friend_ws)
             await manager.send_personal_message({"id":data["id"],"type":"reply-Friend","content":{"message":"Friend request sent"}}, ws)
 
 async def UnFriend(ws: WebSocket, user_id: str, data: Dict):

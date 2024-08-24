@@ -44,8 +44,7 @@ async def get_latest_message(ws: WebSocket, user_id: str):
         friend_requests = []
         if user_id in manager.friend_requests and not manager.friend_requests[user_id] == []:
             friend_requests = manager.friend_requests[user_id]
-            await manager.send_personal_message({"type":"Latest-FriendRequest","content":friend_requests}, ws)
+            await manager.send_personal_message({"type":"FriendRequest","content":friend_requests}, ws)
     except Exception as e:
         print(f"Error fetching friend request data: {e}")
-        await manager.send_personal_message({"type":"Latest-FriendRequest","content":{"message":"Error fetching friend request data"}}, ws)
         return
