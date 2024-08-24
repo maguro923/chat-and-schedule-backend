@@ -35,15 +35,16 @@ async def SearchUsers(ws: WebSocket, user_id: str, data: dict):
                 else:
                     #名前検索 個数制限あり
                     users = database.like(cursor, "users", {}, {"name":search_key},"21")
-                    is_same = False
                     for i in range(len(users)):
                         if str(users[i]["id"]) == user_id:
                             users.pop(i)
-                            is_same = True
                             break
-                    if not is_same:
-                        users.pop(len(users)-1)
-                await manager.send_personal_message({"id":data["id"],"type":"reply-SearchUsers","content":users}, ws)
+                    if len(users) == 21:
+                        users.pop(20)
+                    users_list = []
+                    for user in users:
+                        users_list.append({"id":str(user["id"]),"name":user["name"],"avatar_path":f"/avatars/users{user["avatar_path"]}"})
+                await manager.send_personal_message({"id":data["id"],"type":"reply-SearchUsers","content":users_list}, ws)
     except Exception as e:
         await manager.send_personal_message({"id":data["id"],"type":"reply-SearchUsers","content":{"message":"Error fetching user data"}}, ws)
         print(f"Error fetching user data: {e}")
