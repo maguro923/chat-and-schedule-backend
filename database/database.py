@@ -145,7 +145,7 @@ class Database:
             return False
         
 
-    def like(self, cursor, table: str, filters: dict, like_filteers: dict) -> Optional[List[Dict]]:
+    def like(self, cursor, table: str, filters: dict, like_filteers: dict, limit:str) -> Optional[List[Dict]]:
         try:
             filter_clauses = []
             values = []
@@ -155,9 +155,11 @@ class Database:
             for key, value in like_filteers.items():
                 filter_clauses.append(sql.SQL("{} LIKE %s").format(sql.Identifier(key)))
                 values.append(f'%{value}%')
-            query = sql.SQL("SELECT * FROM {} WHERE {}").format(
+            check = int(limit)
+            query = sql.SQL("SELECT * FROM {} WHERE {} LIMIT {}").format(
                 sql.Identifier(table),
-                sql.SQL(" AND ").join(filter_clauses)
+                sql.SQL(" AND ").join(filter_clauses),
+                limit
             )
             cursor.execute(query, values)
             return cursor.fetchall()
