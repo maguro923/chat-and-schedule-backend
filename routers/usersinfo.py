@@ -11,6 +11,7 @@ import re
 from uuid import uuid4
 from psycopg.rows import dict_row
 import psycopg
+import json
 
 router = APIRouter()
 
@@ -48,12 +49,13 @@ def userdinfo(request:Request, headers:dict = Depends(get_headers)):
     if (not user[0]["access_token"] == headers['access_token'] or 
         not pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9) < token[0]["created_at"]+timedelta(hours=token[0]["validity_hours"])):
         raise HTTPException(status_code=401, detail="Invalid auth")
-    
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
                 response = {}
-                for participant_id in headers['participants_id']:
+                a = eval(headers['participants_id'][0])
+                for participant_id in a:
+                    print(participant_id)
                     if participant_id == headers['user_id'] or participant_id == "":
                         continue
                     user_info = {}
@@ -71,7 +73,7 @@ def userdinfo(request:Request, headers:dict = Depends(get_headers)):
                     else:
                         user_info["is_friend"] = True
                     response[participant_id]=user_info
-
+                print("OK!!!!!!!!!!!!!!!!!!!!!!!!")
                 return {
                     "detail": "success",
                     "users_info": response
