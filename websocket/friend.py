@@ -86,6 +86,10 @@ async def Friend(ws: WebSocket, user_id: str, data: Dict):
                     if (database.insert(cursor,"friendships", {"id": user_id, "friend_id": data["content"]["friend_id"]}) and
                         database.insert(cursor,"friendships", {"id": data["content"]["friend_id"], "friend_id": user_id})):
                         conn.commit()
+                        manager.friend_requests[user_id].remove(data["content"]["friend_id"])
+                        if data["content"]["friend_id"] in manager.active_connections:
+                            friend_ws = manager.active_connections[data["content"]["friend_id"]]
+                            await manager.send_personal_message({"type":"Friend","content":user_id},friend_ws)
                         await manager.send_personal_message({"id":data["id"],"type":"reply-Friend","content":{"message":"Friend is made"}}, ws)
                     else:
                         raise Exception
@@ -158,3 +162,23 @@ async def UnFriend(ws: WebSocket, user_id: str, data: Dict):
             print("transaction rollback")
         await manager.send_personal_message({"id":data["id"],"type":"reply-UnFriend","content":{"message":"Error unfriending"}}, ws)
         return
+
+async def GetFriendList(ws: WebSocket, user_id: str, data: Dict):
+    """
+    友達リスト取得リクエストを処理する
+    """
+    try:
+        with database.get_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cursor:
+                friends = database.fetch(cursor,"friendships", {"id": user_id})
+                friend_list = []
+                for friend in friends:
+                    friend_list.append(str(friend["friend_id"]))
+                friend_request_list = []
+                if user_id in manager.friend_requests:
+                    for req in manager.friend_requests[user_id]:
+                        friend_request_list.append(str(req))
+                await manager.send_personal_message({"id":data["id"],"type":"reply-GetFriendList","content":{"friend":friend_list,"request":friend_request_list}}, ws)
+    except Exception as e:
+        await manager.send_personal_message({"id":data["id"],"type":"reply-GetFriendList","content":{"message":"Error fetching friend data"}}, ws)
+        print(f"Error fetching friend data: {e}")
