@@ -54,6 +54,8 @@ def userdinfo(request:Request, headers:dict = Depends(get_headers)):
             with conn.cursor(row_factory=dict_row) as cursor:
                 response = {}
                 for participant_id in headers['participants_id']:
+                    if participant_id == headers['user_id'] or participant_id == "":
+                        continue
                     user_info = {}
                     #ユーザ情報の取得
                     user = database.fetch(cursor,"users", {"id": participant_id})
