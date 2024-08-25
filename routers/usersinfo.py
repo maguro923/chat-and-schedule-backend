@@ -55,7 +55,6 @@ def userdinfo(request:Request, headers:dict = Depends(get_headers)):
                 response = {}
                 a = eval(headers['participants_id'][0])
                 for participant_id in a:
-                    print(participant_id)
                     if participant_id == headers['user_id'] or participant_id == "":
                         continue
                     user_info = {}
