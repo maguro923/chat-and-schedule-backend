@@ -306,7 +306,8 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
                                          "content":{
                                             "roomid":data["content"]["roomid"],
                                             "type":"system",
-                                            "message":left_message}},
+                                            "message":left_message,
+                                            "created_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9))}},
                                         manager.active_connections[str(participant["user_id"])])
                     except Exception as e:
                         print(f"Error sending leave message: {e}")
