@@ -183,15 +183,24 @@ async def CreateRoom(ws: WebSocket, user_id: str, data: Dict):
                     raise Exception
                 if not database.insert(cursor,"room_participants", {"id":roomid,"user_id":user_id}):
                     raise Exception
+                
                 for join_user_id in data["content"]["participants"]:
                     if not database.insert(cursor,"room_participants", {"id":roomid,"user_id":join_user_id}):
-                        raise Exception    
+                        raise Exception
+                    #websocket通信中なら通知
+                    participants = data["content"]["participants"]
+                    participants.append(user_id)
+                    #    if id != join_user_id:
+                    #        participants.append(id)
+                    if join_user_id in manager.active_connections:
+                        friend_ws = manager.active_connections[join_user_id]
+                        await manager.send_personal_message({"type":"JoinRoom","content":{"id":roomid,"name":data["content"]["roomname"],"avatar_path":"/avatars/rooms/default.png","joined_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)),"participants":participants}}, friend_ws)
                     #FCMのトピックを生成
                 try:
                     registration_tokens = await get_fcm_token(user_id)
                     if not registration_tokens == []:
                         response = messaging.subscribe_to_topic(registration_tokens, roomid)
-                    await manager.send_personal_message({"id":data["id"],"type":"reply-CreateRoom","content":{"message":"Room created","room_id":roomid}}, ws)
+                    await manager.send_personal_message({"id":data["id"],"type":"reply-CreateRoom","content":{"message":"Room created","id":roomid}}, ws)
                 except Exception as e:
                     print(f"Error subscribing to topic: {e}")
                     raise e
