@@ -72,7 +72,6 @@ def userdinfo(request:Request, headers:dict = Depends(get_headers)):
                     else:
                         user_info["is_friend"] = True
                     response[participant_id]=user_info
-                print("OK!!!!!!!!!!!!!!!!!!!!!!!!")
                 return {
                     "detail": "success",
                     "users_info": response
