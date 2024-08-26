@@ -295,8 +295,9 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
                     await manager.send_personal_message({"id":data["id"],"type":"reply-LeaveRoom","content":{"message":"Delete Room"}}, ws)
                 else:
                     #ユーザーに退出を送信
+                    msg_id = str(uuid4())
                     left_message = f"{user_data[0]["name"]} が退出しました"
-                    database.insert(cursor,"messages", {"id":uuid4(),"room_id":data["content"]["roomid"],"type":"system","content":left_message})
+                    database.insert(cursor,"messages", {"id":msg_id,"room_id":data["content"]["roomid"],"type":"system","content":left_message})
                     try:
                         for participant in room_participants:
                             async with manager.lock:
@@ -304,6 +305,7 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
                                     await manager.send_personal_message(
                                         {"type":"ReceiveMessage",
                                          "content":{
+                                            "id":msg_id,
                                             "roomid":data["content"]["roomid"],
                                             "type":"system",
                                             "message":left_message,
