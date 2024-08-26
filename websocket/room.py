@@ -16,7 +16,8 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
     """
     def msg_key_check(data: Dict):
         content = data["content"]
-        if (not "roomid" in content.keys()):
+        if (not "roomid" in content.keys() or
+            not "participants" in content.keys()):
             raise KeyError
         
     async def join_fcm_topic(fcm_token: str, roomid: str):
@@ -40,6 +41,7 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
     
     msg_id = str(uuid4())
     room_participants = []
+    join_user = data["content"]["participants"]
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
@@ -52,7 +54,7 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
                 #既に参加している場合
                 is_joined = False
                 for participant in room_participants:
-                    if user_id == str(participant["user_id"]):
+                    if join_user == str(participant["user_id"]):
                         is_joined = True
                         break
                 if is_joined:
@@ -61,9 +63,9 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
                 
                 #参加メッセージの保存
                 cursor.execute("BEGIN")
-                if not database.insert(cursor,"room_participants", {"id":data["content"]["roomid"],"user_id":user_id}):
+                if not database.insert(cursor,"room_participants", {"id":data["content"]["roomid"],"user_id":join_user}):
                     raise Exception
-                user_data = database.fetch(cursor,"users", {"id":user_id})
+                user_data = database.fetch(cursor,"users", {"id":join_user})
                 join_message = f"{user_data[0]['name']} が参加しました"
                 if not database.insert(cursor,"messages", {"id":msg_id,"room_id":data["content"]["roomid"],"type":"system","content":join_message}):
                     raise Exception
@@ -76,10 +78,28 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
                     raise e
                 
                 #ユーザーが参加したことをルームに送信
+                room_info = database.fetch(cursor,"rooms", {"id":data["content"]["roomid"]})
+                if room_info == []:
+                    raise Exception
+                participants = []
+                participants.append(join_user)
+                for participant in room_participants:
+                    participants.append(str(participant["user_id"]))
                 try:
+                    if join_user in manager.active_connections:
+                        friend_ws = manager.active_connections[join_user]
+                        await manager.send_personal_message({
+                            "type":"JoinRoom",
+                            "content":{
+                                "id":data["content"]["roomid"],
+                                "name":room_info[0]["name"],
+                                "avatar_path":"/avatars/rooms/default.png",
+                                "joined_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)),
+                                "participants":participants}},
+                            friend_ws)
                     for participant in room_participants:
                         async with manager.lock:
-                            if not str(participant["user_id"]) == user_id and str(participant["user_id"]) in manager.active_users_id:
+                            if not str(participant["user_id"]) == join_user and str(participant["user_id"]) in manager.active_users_id:
                                 await manager.send_personal_message(
                                     {"type":"ReceiveMessage",
                                      "content":{
@@ -194,7 +214,15 @@ async def CreateRoom(ws: WebSocket, user_id: str, data: Dict):
                     #        participants.append(id)
                     if join_user_id in manager.active_connections:
                         friend_ws = manager.active_connections[join_user_id]
-                        await manager.send_personal_message({"type":"JoinRoom","content":{"id":roomid,"name":data["content"]["roomname"],"avatar_path":"/avatars/rooms/default.png","joined_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)),"participants":participants}}, friend_ws)
+                        await manager.send_personal_message({
+                            "type":"JoinRoom",
+                            "content":{
+                                "id":roomid,
+                                "name":data["content"]["roomname"],
+                                "avatar_path":"/avatars/rooms/default.png",
+                                "joined_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)),
+                                "participants":participants}},
+                            friend_ws)
                     #FCMのトピックを生成
                 try:
                     registration_tokens = await get_fcm_token(user_id)
