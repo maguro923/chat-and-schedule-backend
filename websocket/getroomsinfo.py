@@ -20,6 +20,8 @@ async def GetRoomsInfo(ws: WebSocket, user_id: str, data: Dict):
                 for room in rooms:
                     room_info = {}
                     room_data = database.fetch(cursor, "rooms", {"id": str(room["id"])})
+                    if room_data == []:
+                        continue
                     room_info["name"] = room_data[0]["name"]
                     room_info["avatar_path"] = f"/avatars/rooms{room_data[0]["avatar_path"]}"
                     room_info["id"] = str(room["id"])
