@@ -9,6 +9,7 @@ import os
 import shutil
 from datetime import datetime, timedelta
 import pytz
+import copy
 
 async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
     """
@@ -203,12 +204,11 @@ async def CreateRoom(ws: WebSocket, user_id: str, data: Dict):
                     raise Exception
                 if not database.insert(cursor,"room_participants", {"id":roomid,"user_id":user_id}):
                     raise Exception
-                
                 for join_user_id in data["content"]["participants"]:
                     if not database.insert(cursor,"room_participants", {"id":roomid,"user_id":join_user_id}):
                         raise Exception
                     #websocket通信中なら通知
-                    participants = data["content"]["participants"]
+                    participants = copy.deepcopy(data["content"]["participants"])
                     participants.append(user_id)
                     #    if id != join_user_id:
                     #        participants.append(id)
@@ -223,7 +223,7 @@ async def CreateRoom(ws: WebSocket, user_id: str, data: Dict):
                                 "joined_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)),
                                 "participants":participants}},
                             friend_ws)
-                    #FCMのトピックを生成
+                #FCMのトピックを生成
                 try:
                     registration_tokens = await get_fcm_token(user_id)
                     if not registration_tokens == []:
