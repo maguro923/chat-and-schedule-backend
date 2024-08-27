@@ -293,17 +293,20 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
                     if os.path.isdir(f"../avatars/rooms/{data["content"]["roomid"]}"):
                         shutil.rmtree(f"../avatars/rooms/{data["content"]["roomid"]}")
                     await manager.send_personal_message({"id":data["id"],"type":"reply-LeaveRoom","content":{"message":"Delete Room"}}, ws)
+                    conn.commit()
                 else:
                     #ユーザーに退出を送信
                     msg_id = str(uuid4())
                     left_message = f"{user_data[0]["name"]} が退出しました"
                     database.insert(cursor,"messages", {"id":msg_id,"room_id":data["content"]["roomid"],"type":"system","content":left_message})
+                    conn.commit()
                     try:
                         for participant in room_participants:
                             async with manager.lock:
                                 if not str(participant["user_id"]) == user_id and (str(participant["user_id"])) in manager.active_users_id:
                                     await manager.send_personal_message(
                                         {"type":"ReceiveMessage",
+                                         "info":{"id":user_id,"type":"LeaveRoom"},
                                          "content":{
                                             "id":msg_id,
                                             "roomid":data["content"]["roomid"],
@@ -315,7 +318,6 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
                         print(f"Error sending leave message: {e}")
                         raise e
                     await manager.send_personal_message({"id":data["id"],"type":"reply-LeaveRoom","content":{"message":"Room left"}}, ws)
-                conn.commit()
     except Exception as e:
         print(f"Error leaving room: {e}")
         if conn:

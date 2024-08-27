@@ -30,20 +30,17 @@ async def Focus(ws: WebSocket, user_id: str, data: Dict):
                     await manager.send_personal_message({"id":data["id"],"type":"reply-Focus","content":{"message":"Room not found"}}, ws)
                     return
                 
+                cursor.execute("BEGIN")
+                if not database.update(cursor,"room_participants", 
+                                {"last_viewed_at": pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)},
+                                {"id": data["content"]["roomid"],"user_id":user_id}):
+                    raise Exception
+                conn.commit()
                 if user_id in manager.focus_room and manager.focus_room[user_id] == data["content"]["roomid"]:
                     await manager.send_personal_message({"id":data["id"],"type":"reply-Focus","content":{"message":"Already focused"}}, ws)
-                    return
-                elif user_id in manager.focus_room and manager.focus_room[user_id] != "":
-                    cursor.execute("BEGIN")
-                    if not database.update(cursor,"room_participants", 
-                                    {"last_viewed_at": pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)},
-                                    {"id": manager.focus_room[user_id],"user_id":user_id}):
-                        raise Exception
-                    manager.focus_room[user_id] = data["content"]["roomid"]
-                    conn.commit()
                 else:
                     manager.focus_room[user_id] = data["content"]["roomid"]
-                await manager.send_personal_message({"id":data["id"],"type":"reply-Focus","content":{"message":"Focused"}}, ws)
+                    await manager.send_personal_message({"id":data["id"],"type":"reply-Focus","content":{"message":"Focused"}}, ws)
     except Exception as e:
         print(f"Error fetching room data: {e}")
         if conn:
