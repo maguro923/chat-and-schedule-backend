@@ -41,7 +41,7 @@ def password_validator(password:str,info: ValidationInfo) -> str:
         return password
 
 class RegisterRequest(BaseModel):
-    username: Annotated[str,Field(min_length=4, max_length=32, pattern=r"^[A-Za-z0-9ぁ-んァ-ン_?!+-@]+$")]
+    username: Annotated[str,Field(max_length=32)]
     email: EmailStr
     password: Annotated[str,AfterValidator(password_validator)]
     deviceid: str
