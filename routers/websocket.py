@@ -30,6 +30,8 @@ async def check_token_exprire(ws: WebSocket, user_id: str):
         if pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9) > manager.latest_token_valid[user_id] + timedelta(hours=VALIDITY_HOURS["access_token"]):
             print(f"Token expired: {user_id}")
             raise WebSocketDisconnect
+        else:
+            print(f"Token valid: {user_id}")
 
 async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
     """
@@ -43,7 +45,7 @@ async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
 
     while True:
         try:
-            print(f"waitng for message from {user_id}")
+            #print(f"waitng for message from {user_id}")
             raw_data = await ws.receive_text()
             data = json.loads(raw_data)
             msg_key_check(data)
