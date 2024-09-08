@@ -1,6 +1,10 @@
-from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, File
+from fastapi import APIRouter, HTTPException, Request, Response, UploadFile, Header, Depends
 from database.database import database
 import os
+from datetime import datetime, timedelta
+import pytz
+import glob
+from psycopg.rows import dict_row
 
 router = APIRouter()
 
@@ -32,28 +36,48 @@ def get_avatar(request:Request, raw_file_path:str):
             print(f"Error getting avatar: {e}")
             raise HTTPException(status_code=500, detail="Error getting avatar")
 
-@router.post("/avatars/{type}/{userid}", status_code=201)
-def post_avatar(file: UploadFile, type:str, userid:str):
+def get_user_headers(
+    device_id: str = Header(...),
+    access_token: str = Header(...)
+):
+    if not device_id or not access_token:
+        raise HTTPException(status_code=400, detail="Invalid headers")
+    return {"device_id": device_id, "access_token": access_token}
+
+@router.post("/avatars/users/{userid}", status_code=201)
+def post_usersavatar(file: UploadFile, userid:str, headers:dict = Depends(get_user_headers)):
     #アップロードされたファイルの保存
     try:
         with database.get_connection() as conn:
-            with conn.cursor() as cursor:
+            with conn.cursor(row_factory=dict_row) as cursor:
                 user = database.fetch(cursor, "users", {"id":userid})
+                token = database.fetch(cursor,"access_tokens", {"access_token": headers['access_token']})
                 if user == []:
                     raise HTTPException(status_code=404, detail="User not found")
-                print(file.filename)
-                os.makedirs(f"./avatars/{type}/{userid}", exist_ok=True)
-                with open (f"./avatars/{type}/{userid}/{file.filename}", "wb") as f:
+                
+                #パスワードの確認及びアクセストークンの有効期限の確認及びデバイスIDの確認(同一デバイスであるか)
+                if (not user[0]["access_token"] == headers['access_token'] or 
+                    not pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9) < token[0]["created_at"]+timedelta(hours=token[0]["validity_hours"]) or 
+                    not user[0]["device_id"] == headers['device_id']):
+                    raise HTTPException(status_code=401, detail="Invalid auth")
+                
+                os.makedirs(f"./avatars/users/{userid}", exist_ok=True)
+                #既存のアバター画像を削除
+                for p in glob.glob(f"./avatars/users/{userid}/avatar-*.png", recursive=True):
+                    if os.path.isfile(p):
+                        os.remove(p)
+                #アバター画像の保存
+                with open (f"./avatars/users/{userid}/{file.filename}", "wb") as f:
                     f.write(file.file.read())
                 cursor.execute("BEGIN")
-                path = f"{type}/{userid}/{file.filename}"
-                if not database.update(cursor, "users", {"avatar_path":file.filename}, {"id":userid}):
+                path = f"/{userid}/{file.filename}"
+                if not database.update(cursor, "users", {"avatar_path":path, "updated_at":pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)}, {"id":userid}):
                     raise Exception
                 conn.commit()
+                return {"detail": "avatar uploaded"}
     except Exception as e:
         print(f"Error saving avatar: {e}")
         if conn:
             conn.rollback()
             print("transaction rollback")
         raise HTTPException(status_code=500, detail="Error saving avatar")
-    return {"detail": "avatar uploaded"}
