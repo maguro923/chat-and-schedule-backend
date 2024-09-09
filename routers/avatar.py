@@ -45,7 +45,7 @@ def get_user_headers(
     return {"device_id": device_id, "access_token": access_token}
 
 @router.post("/avatars/users/{userid}", status_code=201)
-def post_usersavatar(file: UploadFile, userid:str, headers:dict = Depends(get_user_headers)):
+def post_useravatar(file: UploadFile, userid:str, headers:dict = Depends(get_user_headers)):
     #アップロードされたファイルの保存
     try:
         with database.get_connection() as conn:
@@ -72,6 +72,53 @@ def post_usersavatar(file: UploadFile, userid:str, headers:dict = Depends(get_us
                 cursor.execute("BEGIN")
                 path = f"/{userid}/{file.filename}"
                 if not database.update(cursor, "users", {"avatar_path":path, "updated_at":pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)}, {"id":userid}):
+                    raise Exception
+                conn.commit()
+                return {"detail": "avatar uploaded"}
+    except Exception as e:
+        print(f"Error saving avatar: {e}")
+        if conn:
+            conn.rollback()
+            print("transaction rollback")
+        raise HTTPException(status_code=500, detail="Error saving avatar")
+
+def get_room_headers(
+    device_id: str = Header(...),
+    access_token: str = Header(...),
+    user_id: str = Header(...)
+):
+    if not device_id or not access_token or not user_id:
+        raise HTTPException(status_code=400, detail="Invalid headers")
+    return {"device_id": device_id, "access_token": access_token, "user_id": user_id}
+
+@router.post("/avatars/rooms/{roomid}", status_code=201)
+def post_roomavatar(file: UploadFile, roomid:str, headers:dict = Depends(get_room_headers)):
+    #アップロードされたファイルの保存
+    try:
+        with database.get_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cursor:
+                user = database.fetch(cursor, "users", {"id":headers["user_id"]})
+                token = database.fetch(cursor,"access_tokens", {"access_token": headers['access_token']})
+                if user == []:
+                    raise HTTPException(status_code=404, detail="User not found")
+                
+                #パスワードの確認及びアクセストークンの有効期限の確認及びデバイスIDの確認(同一デバイスであるか)
+                if (not user[0]["access_token"] == headers['access_token'] or 
+                    not pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9) < token[0]["created_at"]+timedelta(hours=token[0]["validity_hours"]) or 
+                    not user[0]["device_id"] == headers['device_id']):
+                    raise HTTPException(status_code=401, detail="Invalid auth")
+                
+                os.makedirs(f"./avatars/rooms/{roomid}", exist_ok=True)
+                #既存のアバター画像を削除
+                for p in glob.glob(f"./avatars/rooms/{roomid}/avatar-*.png", recursive=True):
+                    if os.path.isfile(p):
+                        os.remove(p)
+                #アバター画像の保存
+                with open (f"./avatars/rooms/{roomid}/{file.filename}", "wb") as f:
+                    f.write(file.file.read())
+                cursor.execute("BEGIN")
+                path = f"/{roomid}/{file.filename}"
+                if not database.update(cursor, "rooms", {"avatar_path":path, "updated_at":pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)}, {"id":roomid}):
                     raise Exception
                 conn.commit()
                 return {"detail": "avatar uploaded"}
