@@ -166,6 +166,22 @@ class Database:
         except Exception as e:
             print(f"Error fetching data: {e}")
             raise e
+        
+    def in_fetch(self, cursor, table: str, key: str, filters: List) -> Optional[List[Dict]]:
+        try:
+            # IN句のフィルタのためのプレースホルダーを作成
+            placeholders = sql.SQL(', ').join(filter for filter in filters)
+            query = sql.SQL("SELECT * FROM {} WHERE {} IN ({})").format(
+                sql.Identifier(table),
+                sql.Identifier(key),
+                placeholders
+            )
+            cursor.execute(query)
+            return cursor.fetchall()
+        
+        except Exception as e:
+            print(f"Error fetching data: {e}")
+            raise e
 
 database = Database()
 
