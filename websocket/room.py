@@ -90,20 +90,17 @@ async def JoinRoom(ws: WebSocket, user_id: str, data: Dict):
                     if join_user in manager.active_connections:
                         friend_ws = manager.active_connections[join_user]
                         await manager.send_personal_message({
-                            "type":"JoinRoom",
+                            "type":"JoinUser",
                             "content":{
-                                "id":data["content"]["roomid"],
-                                "name":room_info[0]["name"],
-                                "avatar_path":"/avatars/rooms/default.png",
-                                "joined_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)),
-                                "participants":participants}},
+                                "room_id":data["content"]["roomid"],
+                                "user_id":join_user}},
                             friend_ws)
                     for participant in room_participants:
                         async with manager.lock:
                             if not str(participant["user_id"]) == join_user and str(participant["user_id"]) in manager.active_users_id:
-                                await manager.send_personal_message(
-                                    {"type":"ReceiveMessage",
-                                     "content":{
+                                await manager.send_personal_message({
+                                    "type":"ReceiveMessage",
+                                    "content":{
                                         "id":msg_id,
                                         "roomid":data["content"]["roomid"],
                                         "type":"system",
