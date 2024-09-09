@@ -310,15 +310,21 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
                         for participant in room_participants:
                             async with manager.lock:
                                 if not str(participant["user_id"]) == user_id and (str(participant["user_id"])) in manager.active_users_id:
-                                    await manager.send_personal_message(
-                                        {"type":"ReceiveMessage",
-                                         "info":{"id":user_id,"type":"LeaveRoom"},
-                                         "content":{
+                                    await manager.send_personal_message({
+                                        "type":"ReceiveMessage",
+                                        "info":{"id":user_id,"type":"LeaveRoom"},
+                                        "content":{
                                             "id":msg_id,
                                             "roomid":data["content"]["roomid"],
                                             "type":"system",
                                             "message":left_message,
                                             "created_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9))}},
+                                        manager.active_connections[str(participant["user_id"])])
+                                    await manager.send_personal_message({
+                                        "type":"ReceiveMessage",
+                                        "content":{
+                                            "user_id":user_id,
+                                            "room_id":data["content"]["roomid"]}},
                                         manager.active_connections[str(participant["user_id"])])
                     except Exception as e:
                         print(f"Error sending leave message: {e}")
