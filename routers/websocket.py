@@ -23,15 +23,13 @@ async def check_token_exprire(ws: WebSocket, user_id: str):
     アクセストークンの有効期限を確認し、有効期限が切れた場合に切断する
     """
     while True:
-        print(f"Token check: {user_id}", manager.latest_token_valid[user_id],"{}h".format(VALIDITY_HOURS["access_token"]))
+        #print(f"Token check: {user_id}", manager.latest_token_valid[user_id],"{}h".format(VALIDITY_HOURS["access_token"]))
         await asyncio.sleep(VALIDITY_HOURS["access_token"]*3600-600)
         await manager.send_personal_message({"type":"AuthInfo","content":{"message":"Your access token has expired after 10 minutes. Please refresh access token."}},ws)
         await asyncio.sleep(600)
         if pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9) > manager.latest_token_valid[user_id] + timedelta(hours=VALIDITY_HOURS["access_token"]):
-            print(f"Token expired: {user_id}")
+            #print(f"Token expired: {user_id}")
             raise WebSocketDisconnect
-        else:
-            print(f"Token valid: {user_id}")
 
 async def recv_msg(ws: WebSocket, user_id: str, tg: asyncio.TaskGroup):
     """
