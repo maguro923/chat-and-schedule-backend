@@ -321,7 +321,7 @@ async def LeaveRoom(ws: WebSocket, user_id: str, data: Dict):
                                             "created_at":str(pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9))}},
                                         manager.active_connections[str(participant["user_id"])])
                                     await manager.send_personal_message({
-                                        "type":"ReceiveMessage",
+                                        "type":"LeaveUser",
                                         "content":{
                                             "user_id":user_id,
                                             "room_id":data["content"]["roomid"]}},
