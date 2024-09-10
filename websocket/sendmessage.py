@@ -89,7 +89,7 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
         try:
             if str(participant["user_id"]) in manager.active_connections and not str(participant["user_id"]) == user_id:
                 #送信先のユーザーが接続中の場合
-                print(f"send message to {participant['user_id']}")
+                #print(f"send message to {participant['user_id']}")
                 msg_type = ""
                 msg = ""
                 if data["content"]["type"] == "text":
@@ -111,7 +111,8 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
                     manager.active_connections[str(participant["user_id"])])
             elif not str(participant["user_id"]) == user_id:
                 #送信先のユーザーが接続中でない場合
-                print(f"{participant['user_id']} is offline")
+                #print(f"{participant['user_id']} is offline")
+                pass
         except Exception as e:
             print(f"Error sending message: {e}")
             pass
