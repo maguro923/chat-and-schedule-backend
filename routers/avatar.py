@@ -5,6 +5,8 @@ from datetime import datetime, timedelta
 import pytz
 import glob
 from psycopg.rows import dict_row
+from websocket.manager import manager
+import asyncio
 
 router = APIRouter()
 
@@ -93,14 +95,31 @@ def get_room_headers(
 
 @router.post("/avatars/rooms/{roomid}", status_code=201)
 def post_roomavatar(file: UploadFile, roomid:str, headers:dict = Depends(get_room_headers)):
+    async def send_message_to_ws(ws, id, name, avatar_path, joined_at):
+        """
+        非同期的に更新されたルーム情報を送信
+        """
+        await manager.send_personal_message({
+            "type":"UpdateRoom",
+            "content":{
+                "id":id,
+                "name":name,
+                "avatar_path":f"/avatars/rooms{avatar_path}",
+                "joined_at":joined_at}},
+            ws)
+
     #アップロードされたファイルの保存
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
                 user = database.fetch(cursor, "users", {"id":headers["user_id"]})
                 token = database.fetch(cursor,"access_tokens", {"access_token": headers['access_token']})
+                room_participants = database.fetch(cursor, "room_participants", {"id":roomid})
+                room_info = database.fetch(cursor, "rooms", {"id":roomid})
                 if user == []:
                     raise HTTPException(status_code=404, detail="User not found")
+                if room_info == []:
+                    raise HTTPException(status_code=404, detail="Room not found")
                 
                 #パスワードの確認及びアクセストークンの有効期限の確認及びデバイスIDの確認(同一デバイスであるか)
                 if (not user[0]["access_token"] == headers['access_token'] or 
@@ -121,6 +140,16 @@ def post_roomavatar(file: UploadFile, roomid:str, headers:dict = Depends(get_roo
                 if not database.update(cursor, "rooms", {"avatar_path":path, "updated_at":pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)}, {"id":roomid}):
                     raise Exception
                 conn.commit()
+
+                #ルームに参加しているユーザーがwebsocketに接続している場合、ルーム情報を送信
+                participants = []
+                for participant in room_participants:
+                    if not str(participant["user_id"]) == headers["user_id"]:
+                        participants.append({"id":str(participant["user_id"]),"joined_at":str(participant["joined_at"])})
+                for participant in participants:
+                    if participant["id"] in manager.active_connections:
+                        friend_ws = manager.active_connections[participant["id"]]
+                        asyncio.run(send_message_to_ws(friend_ws, roomid, room_info[0]["name"],path,participant["joined_at"]))
                 return {"detail": "avatar uploaded"}
     except Exception as e:
         print(f"Error saving avatar: {e}")
