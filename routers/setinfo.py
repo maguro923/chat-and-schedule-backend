@@ -1,9 +1,7 @@
 from fastapi import APIRouter, HTTPException, Header, Depends
 from database.database import database
-import os
 from datetime import datetime, timedelta
 import pytz
-import glob
 from psycopg.rows import dict_row
 from websocket.manager import manager
 import asyncio
@@ -24,6 +22,23 @@ def get_user_headers(
 
 @router.post("/users/{userid}", status_code=201)
 def set_userinfo(body:Request, userid:str, headers:dict = Depends(get_user_headers)):
+    """
+    アバター以外のユーザー情報を更新するAPI
+    """
+    async def send_message_to_ws(ws, id, name, avatar_path, is_frinend):
+        """
+        非同期的に更新されたユーザー情報を送信
+        """
+        print("send_message_to_ws")
+        await manager.send_personal_message({
+            "type":"UpdateUser",
+            "content":{
+                "id":id,
+                "name":name,
+                "avatar_path":f"/avatars/users{avatar_path}",
+                "is_friend":is_frinend}},
+            ws)
+
     try:
         with database.get_connection() as conn:
             with conn.cursor(row_factory=dict_row) as cursor:
@@ -41,6 +56,26 @@ def set_userinfo(body:Request, userid:str, headers:dict = Depends(get_user_heade
                 cursor.execute("BEGIN")
                 if not database.update(cursor, "users", {"name":body.name, "updated_at":pytz.timezone('Asia/Tokyo').localize(datetime.now())+timedelta(hours=9)}, {"id":userid}):
                     raise Exception
+                
+                #ユーザー情報をフレンド及びルーム参加者に通知
+                users_id = []
+                rooms_id = []
+                friends = database.fetch(cursor, "friendships", {"id":userid})
+                for friend in friends:
+                    if not str(friend["friend_id"]) in [id[0] for id in users_id]:
+                        users_id.append((str(friend["friend_id"]),True))
+                rooms = database.fetch(cursor, "room_participants", {"user_id":userid})
+                for room in rooms:
+                    if not str(room["id"]) in rooms_id:
+                        rooms_id.append(str(room["id"]))
+                room_participants = database.in_fetch(cursor, "room_participants", "id", rooms_id)
+                for room_participant in room_participants:
+                    if not str(room_participant["user_id"]) in [id[0] for id in users_id] and not str(room_participant["user_id"]) == userid:
+                        users_id.append((str(room_participant["user_id"]),False))
+                for participant in users_id:
+                    if participant[0] in manager.active_connections:
+                        friend_ws = manager.active_connections[participant[0]]
+                        asyncio.run(send_message_to_ws(friend_ws, userid, body.name, user[0]["avatar_path"], participant[1]))
                 conn.commit()
                 return {"detail": "infomation updated"}
     except Exception as e:
