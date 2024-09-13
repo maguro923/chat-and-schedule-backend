@@ -234,7 +234,13 @@ async def CreateRoom(ws: WebSocket, user_id: str, data: Dict):
                     registration_tokens = await get_fcm_token(user_id)
                     if not registration_tokens == []:
                         response = messaging.subscribe_to_topic(registration_tokens, roomid)
-                    await manager.send_personal_message({"id":data["id"],"type":"reply-CreateRoom","content":{"message":"Room created","id":roomid}}, ws)
+                    await manager.send_personal_message({
+                        "id":data["id"],"type":"reply-CreateRoom",
+                        "content":{
+                            "message":"Room created",
+                            "id":roomid,
+                            "avatar_path":"/avatars/rooms/default.png"}}
+                        , ws)
                 except Exception as e:
                     print(f"Error subscribing to topic: {e}")
                     raise e
