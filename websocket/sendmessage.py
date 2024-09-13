@@ -32,7 +32,25 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
             if str(participant["user_id"]) == user_id:
                 return True
         return False
+    
+    async def notify_offline_participants(notify_participants: list, roomid: str, notification: messaging.Notification):
+        """
+        オフラインのユーザーにメッセージを通知
+        """
+        with database.get_connection() as conn:
+            with conn.cursor(row_factory=dict_row) as cursor:
+                users_info = database.in_fetch(cursor,"users", "id", notify_participants)
+                if users_info == []:
+                    return
+                fcm_tokens = [user["fcm_token"] for user in users_info if user["fcm_token"] != None]
+                message = {
+                    "notification":notification,
+                    "tokens":fcm_tokens
+                }
+                response = messaging.send(message)
+                print(f"send notify request: {response}")
 
+    #メッセージの形式チェック
     try:
         if not "type" in data["content"].keys():
             raise KeyError
@@ -85,11 +103,11 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
         , ws)
     
     #メッセージ送信
+    notify_participants = []
     for participant in room_participants:
         try:
             if str(participant["user_id"]) in manager.active_connections and not str(participant["user_id"]) == user_id:
                 #送信先のユーザーが接続中の場合
-                #print(f"send message to {participant['user_id']}")
                 msg_type = ""
                 msg = ""
                 if data["content"]["type"] == "text":
@@ -111,8 +129,7 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
                     manager.active_connections[str(participant["user_id"])])
             elif not str(participant["user_id"]) == user_id:
                 #送信先のユーザーが接続中でない場合
-                #print(f"{participant['user_id']} is offline")
-                pass
+                notify_participants.append(str(participant["user_id"]))
         except Exception as e:
             print(f"Error sending message: {e}")
             pass
@@ -122,15 +139,12 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
             bodytext = data["content"]["message"]
         elif data["content"]["type"] == "image":
             bodytext = "写真が送信されました"
-        message = messaging.Message(
-            notification=messaging.Notification(
-                title="新しいメッセージ",
-                body=bodytext
-            ),
-            topic=data["content"]["roomid"]
+        notification=messaging.Notification(
+            title="新しいメッセージ",
+            body=bodytext
         )
-        response = messaging.send(message)
-        print(response)
+        await notify_offline_participants(notify_participants, data["content"]["roomid"],notification)
+        #response = messaging.send(message)
+        #print(response)
     except Exception as e:
         print(f"Error sending FCM notifiction: {e}")
-        pass
