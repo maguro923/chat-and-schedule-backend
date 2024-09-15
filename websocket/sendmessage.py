@@ -33,7 +33,7 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
                 return True
         return False
     
-    async def notify_offline_participants(notify_participants: list, roomid: str, notification: messaging.Notification):
+    def notify_offline_participants(notify_participants: list, roomid: str, notification: messaging.Notification):
         """
         オフラインのユーザーにメッセージを通知
         """
@@ -43,12 +43,14 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
                 if users_info == []:
                     return
                 fcm_tokens = [user["fcm_token"] for user in users_info if user["fcm_token"] != None]
-                message = {
-                    "notification":notification,
-                    "tokens":fcm_tokens
-                }
-                response = messaging.send(message)
-                print(f"send notify request: {response}")
+                message = messaging.MulticastMessage(
+                    notification=notification,
+                    tokens=fcm_tokens
+                )
+                response = messaging.send_multicast(message)
+                print(f"send notify to {len(fcm_tokens)} devices : {response}")
+                if response.failure_count > 0:
+                    print(f"Failed to send message to {response.failure_count} devices")
 
     #メッセージの形式チェック
     try:
@@ -143,8 +145,12 @@ async def SendMessage(ws: WebSocket, user_id: str, data: Dict):
             title="新しいメッセージ",
             body=bodytext
         )
-        await notify_offline_participants(notify_participants, data["content"]["roomid"],notification)
-        #response = messaging.send(message)
-        #print(response)
+        #notify_offline_participants(notify_participants, data["content"]["roomid"],notification)
+        message = messaging.Message(
+            notification=notification,
+            topic=data["content"]["roomid"]
+        )
+        response = messaging.send(message)
+        print(response)
     except Exception as e:
         print(f"Error sending FCM notifiction: {e}")
